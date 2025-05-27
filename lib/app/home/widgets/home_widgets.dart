@@ -1,4 +1,4 @@
-import 'package:effihire/app/home/screen/registration_screen.dart';
+import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
