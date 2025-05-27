@@ -1,3 +1,4 @@
+import 'package:effihire/app/home/screen/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
@@ -10,7 +11,7 @@ class WelcomeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
@@ -59,8 +60,11 @@ class WelcomeSection extends StatelessWidget {
                         SizedBox(height: screenWidth * 0.03),
                         ElevatedButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Registration clicked!')),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const RegistrationScreen(),
+                              ),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -93,10 +97,7 @@ class WelcomeSection extends StatelessWidget {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF8B5CF6),
-                          Color(0xFF5B3E86),
-                        ],
+                        colors: [Color(0xFF8B5CF6), Color(0xFF5B3E86)],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -136,7 +137,7 @@ class LocationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
@@ -172,7 +173,7 @@ class LocationSection extends StatelessWidget {
                       Container(
                         padding: EdgeInsets.all(screenWidth * 0.025),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF5B3E86).withOpacity(0.1),
+                          color: const Color(0xFF5B3E86).withAlpha(25),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -241,7 +242,7 @@ class OpportunityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       child: Material(
@@ -309,7 +310,7 @@ class EarningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(

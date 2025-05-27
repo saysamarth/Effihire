@@ -7,7 +7,6 @@ class CurvedBackgroundClipper extends CustomClipper<Path> {
     double startY = size.height * 0.85;
     path.lineTo(0, size.height * 0.80);
 
-    // Smoother curve with multiple control points
     path.quadraticBezierTo(
       size.width * 0.25, startY,
       size.width * 0.5, startY,
