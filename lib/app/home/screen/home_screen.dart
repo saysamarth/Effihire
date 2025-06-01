@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: OpportunityButton(
                           name: opportunity['name'],
                           color: opportunity['color'],
-                          icon: opportunity['icon'],
+                          logoPath: opportunity['logoPath'],
                           isSelected: isSelected,
                           onTap: () {
                             setState(() {
@@ -256,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Earning Opportunities',
+                      'Earning Potential',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: screenWidth * 0.055,
                         fontWeight: FontWeight.w700,
@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     crossAxisCount: 2,
                     mainAxisSpacing: screenWidth * 0.03,
                     crossAxisSpacing: screenWidth * 0.03,
-                    childAspectRatio: 0.9,
+                    childAspectRatio: 1.2,
                   ),
                   itemCount: OpportunityData.opportunities.length,
                   itemBuilder: (context, index) {
@@ -317,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         location: opportunity.location,
         earning: opportunity.earning,
         color: opportunity.color,
-        icon: opportunity.icon,
+        logoPath: opportunity.logoPath,
       ),
     );
   }

@@ -1,4 +1,4 @@
-import 'package:effihire/app/home/screen/registration_screen.dart';
+import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
@@ -226,7 +226,7 @@ class LocationSection extends StatelessWidget {
 class OpportunityButton extends StatelessWidget {
   final String name;
   final Color color;
-  final IconData icon;
+ final String logoPath; 
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -234,7 +234,7 @@ class OpportunityButton extends StatelessWidget {
     super.key,
     required this.name,
     required this.color,
-    required this.icon,
+    required this.logoPath,
     required this.isSelected,
     required this.onTap,
   });
@@ -274,10 +274,20 @@ class OpportunityButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  icon,
-                  size: screenWidth * 0.04,
-                  color: isSelected ? color : color.withOpacity(0.8),
+                // Changed from Icon to Image.asset
+                Image.asset(
+                  logoPath,
+                  width: screenWidth * 0.04,
+                  height: screenWidth * 0.04,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback icon if image fails to load
+                    return Icon(
+                      Icons.business,
+                      size: screenWidth * 0.04,
+                      color: isSelected ? color : color.withOpacity(0.8),
+                    );
+                  },
                 ),
                 SizedBox(width: screenWidth * 0.015),
                 Text(
@@ -324,7 +334,7 @@ class EarningCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withAlpha(20),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -339,13 +349,25 @@ class EarningCard extends StatelessWidget {
                     width: screenWidth * 0.08,
                     height: screenWidth * 0.08,
                     decoration: BoxDecoration(
-                      color: opportunity.color.withOpacity(0.15),
+                      color: opportunity.color.withAlpha(40),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      opportunity.icon,
-                      color: opportunity.color,
-                      size: screenWidth * 0.04,
+                    child: Padding(
+                      padding: EdgeInsets.all(
+                        screenWidth * 0.01,
+                      ),
+                      child: Image.asset(
+                        opportunity.logoPath,
+                        fit: BoxFit
+                            .contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.business,
+                            color: opportunity.color,
+                            size: screenWidth * 0.04,
+                          );
+                        },
+                      ),
                     ),
                   ),
                   SizedBox(width: screenWidth * 0.025),
@@ -405,7 +427,7 @@ class EarningCard extends StatelessWidget {
                       vertical: screenWidth * 0.01,
                     ),
                     decoration: BoxDecoration(
-                      color: opportunity.color.withOpacity(0.1),
+                      color: opportunity.color.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(

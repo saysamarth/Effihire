@@ -6,7 +6,7 @@ class CompanyDetailsSheet extends StatelessWidget {
   final String location;
   final String earning;
   final Color color;
-  final IconData icon;
+  final String logoPath;
 
   const CompanyDetailsSheet({
     super.key,
@@ -14,7 +14,7 @@ class CompanyDetailsSheet extends StatelessWidget {
     required this.location,
     required this.earning,
     required this.color,
-    required this.icon,
+    required this.logoPath,
   });
 
   @override
@@ -50,7 +50,14 @@ class CompanyDetailsSheet extends StatelessWidget {
                     color: color.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  child: Icon(icon, color: color, size: 30),
+                  child: Image.asset(
+                    logoPath,
+                    fit: BoxFit
+                        .contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.business, color: color, size: 20);
+                    },
+                  ),
                 ),
                 const SizedBox(width: 15),
                 Column(
