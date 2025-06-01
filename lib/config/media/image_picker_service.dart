@@ -1,232 +1,159 @@
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
-enum ImageSourceType { camera, gallery, both }
+enum DocumentScanType { document, selfie }
 
-class ImagePickerService {
-  static final ImagePickerService _instance = ImagePickerService._internal();
-  factory ImagePickerService() => _instance;
-  ImagePickerService._internal();
+class DocumentScannerService {
+  static final DocumentScannerService _instance = DocumentScannerService._internal();
+  factory DocumentScannerService() => _instance;
+  DocumentScannerService._internal();
 
   final ImagePicker _picker = ImagePicker();
+  DocumentScanner? _documentScanner;
 
-  Future<File?> pickImage({
+  // Initialize the document scanner
+  Future<void> initializeScanner() async {
+    _documentScanner ??= DocumentScanner(
+        options: DocumentScannerOptions(
+          documentFormat: DocumentFormat.jpeg,
+          mode: ScannerMode.filter,
+          pageLimit: 1,
+          isGalleryImport: true,
+        ),
+      );
+  }
+
+  Future<File?> scanDocument({
     required BuildContext context,
-    ImageSourceType sourceType = ImageSourceType.both,
+    DocumentScanType scanType = DocumentScanType.document,
     double? maxWidth = 1920,
     double? maxHeight = 1080,
-    int imageQuality = 85,
+    int imageQuality = 90,
   }) async {
     try {
-      ImageSource? source;
-
-      if (sourceType == ImageSourceType.both) {
-        source = await _showImageSourceDialog(context);
-        if (source == null) return null;
-      } else {
-        source = sourceType == ImageSourceType.camera 
-            ? ImageSource.camera 
-            : ImageSource.gallery;
+      if (scanType == DocumentScanType.selfie) {
+        return await _captureRegularImage(
+          context: context,
+          maxWidth: maxWidth ?? 1024,
+          maxHeight: maxHeight ?? 1024,
+          imageQuality: imageQuality,
+        );
       }
 
-      bool hasPermission = await _checkPermissions(source);
+      bool hasPermission = await _checkCameraPermission();
       if (!hasPermission) {
-        _showErrorSnackBar(context, 'Permission denied. Please grant ${source == ImageSource.camera ? 'camera' : 'storage'} permission in settings.');
+        _showErrorSnackBar(context, 'Camera permission is required to scan documents.');
         return null;
       }
 
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: maxWidth,
-        maxHeight: maxHeight,
-        imageQuality: imageQuality,
-      );
+      await initializeScanner();
+      
+      if (_documentScanner == null) {
+        _showErrorSnackBar(context, 'Failed to initialize document scanner.');
+        return null;
+      }
 
-      return image != null ? File(image.path) : null;
+      // Start document scanning
+      final DocumentScanningResult result = await _documentScanner!.scanDocument();
+      
+      if (result.images.isNotEmpty) {
+        // Get the first scanned image
+        final String imagePath = result.images.first;
+        final File scannedFile = File(imagePath);
+        
+        if (await scannedFile.exists()) {
+          return scannedFile;
+        } else {
+          _showErrorSnackBar(context, 'Scanned document file not found.');
+          return null;
+        }
+      } else {
+        // User cancelled or no document was scanned
+        return null;
+      }
     } catch (e) {
-      _showErrorSnackBar(context, 'Error picking image: $e');
+      if (e.toString().contains('cancel')) {
+        // User cancelled - don't show error
+        return null;
+      }
+      _showErrorSnackBar(context, 'Error scanning document: ${e.toString()}');
       return null;
     }
   }
 
-  Future<List<File>> pickMultipleImages({
+  // Fallback method for selfies using regular camera
+  Future<File?> _captureRegularImage({
     required BuildContext context,
-    int maxImages = 10,
-    double? maxWidth = 1920,
-    double? maxHeight = 1080,
-    int imageQuality = 85,
+    double maxWidth = 1024,
+    double maxHeight = 1024,
+    int imageQuality = 90,
   }) async {
     try {
-      // Check storage permission
-      bool hasPermission = await _checkPermissions(ImageSource.gallery);
+      bool hasPermission = await _checkCameraPermission();
       if (!hasPermission) {
-        _showErrorSnackBar(context, 'Permission denied. Please grant storage permission in settings.');
-        return [];
+        _showErrorSnackBar(context, 'Camera permission is required.');
+        return null;
       }
 
-      final List<XFile> images = await _picker.pickMultiImage(
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
         imageQuality: imageQuality,
+        preferredCameraDevice: CameraDevice.front, // Use front camera for selfies
       );
 
-      if (images.length > maxImages) {
-        _showErrorSnackBar(context, 'Maximum $maxImages images allowed');
-        return images.take(maxImages).map((xFile) => File(xFile.path)).toList();
-      }
-
-      return images.map((xFile) => File(xFile.path)).toList();
+      return image != null ? File(image.path) : null;
     } catch (e) {
-      _showErrorSnackBar(context, 'Error picking images: $e');
-      return [];
+      _showErrorSnackBar(context, 'Error capturing image: $e');
+      return null;
     }
   }
 
-  Future<bool> _checkPermissions(ImageSource source) async {
-    if (source == ImageSource.camera) {
-      var status = await Permission.camera.status;
-      if (status.isDenied) {
-        status = await Permission.camera.request();
-      }
-      return status.isGranted;
-    } else {
-      // For gallery access
-      if (Platform.isAndroid) {
-        var status = await Permission.storage.status;
-        if (status.isDenied) {
-          status = await Permission.storage.request();
-        }
-        return status.isGranted;
-      } else {
-        var status = await Permission.photos.status;
-        if (status.isDenied) {
-          status = await Permission.photos.request();
-        }
-        return status.isGranted;
-      }
+  // Check camera permission
+  Future<bool> _checkCameraPermission() async {
+    var status = await Permission.camera.status;
+    if (status.isDenied) {
+      status = await Permission.camera.request();
     }
+    return status.isGranted;
   }
 
-  Future<ImageSource?> _showImageSourceDialog(BuildContext context) async {
-    return showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Select Image Source',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF5B3E86),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSourceOption(
-              context: context,
-              icon: Icons.camera_alt,
-              label: 'Camera',
-              subtitle: 'Take a new photo',
-              source: ImageSource.camera,
-            ),
-            const SizedBox(height: 12),
-            _buildSourceOption(
-              context: context,
-              icon: Icons.photo_library,
-              label: 'Gallery',
-              subtitle: 'Choose from gallery',
-              source: ImageSource.gallery,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSourceOption({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required ImageSource source,
-  }) {
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(source),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF5B3E86).withAlpha(25),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: const Color(0xFF5B3E86),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // Show error snackbar
   void _showErrorSnackBar(BuildContext context, String message) {
     if (!context.mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 4),
       ),
     );
   }
 
+  void _showSuccessSnackBar(BuildContext context, String message) {
+    if (!context.mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Utility methods (keeping the useful ones from the original service)
   bool isValidImage(File file) {
     final validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
     final fileName = file.path.toLowerCase();
@@ -249,30 +176,11 @@ class ImagePickerService {
     }
   }
 
-  Future<File?> compressImageIfNeeded(
-    BuildContext context,
-    File file, {
-    double maxSizeInMB = 5.0,
-    int quality = 70,
-  }) async {
-    try {
-      if (getImageSizeInMB(file) <= maxSizeInMB) {
-        return file;
-      }
-
-      // Use image_picker to re-compress the image
-      final XFile compressedFile = XFile(file.path);
-      
-      // For now, return the original file as compression would require additional packages
-      // You can integrate packages like flutter_image_compress for better compression
-      return file;
-    } catch (e) {
-      _showErrorSnackBar(context, 'Error compressing image: $e');
-      return file;
-    }
+  String getFileName(File file) {
+    return file.path.split('/').last;
   }
 
-  // Additional utility methods
+  // Delete image file
   Future<bool> deleteImage(File file) async {
     try {
       if (await file.exists()) {
@@ -285,14 +193,12 @@ class ImagePickerService {
     }
   }
 
-  String getFileName(File file) {
-    return file.path.split('/').last;
+  // Validate image size
+  bool validateImageSize(File file, {double maxSizeInMB = 10.0}) {
+    return getImageSizeInMB(file) <= maxSizeInMB;
   }
 
-  String getFileExtension(File file) {
-    return file.path.split('.').last.toLowerCase();
-  }
-
+  // Get image information
   Future<Map<String, dynamic>> getImageInfo(File file) async {
     try {
       final stat = await file.stat();
@@ -301,7 +207,6 @@ class ImagePickerService {
         'size': getImageSizeFormatted(file),
         'sizeInBytes': file.lengthSync(),
         'sizeInMB': getImageSizeInMB(file),
-        'extension': getFileExtension(file),
         'path': file.path,
         'lastModified': stat.modified,
         'isValid': isValidImage(file),
@@ -356,7 +261,6 @@ class ImagePickerService {
                   child: IconButton(
                     icon: const Icon(Icons.share, color: Colors.black),
                     onPressed: () {
-                      // Implement share functionality if needed
                       Navigator.of(context).pop();
                     },
                   ),
@@ -369,81 +273,8 @@ class ImagePickerService {
     );
   }
 
-  // Batch operations
-  Future<List<File>> compressMultipleImages(
-    BuildContext context,
-    List<File> files, {
-    double maxSizeInMB = 5.0,
-    int quality = 70,
-  }) async {
-    List<File> compressedFiles = [];
-    
-    for (File file in files) {
-      File? compressed = await compressImageIfNeeded(
-        context,
-        file,
-        maxSizeInMB: maxSizeInMB,
-        quality: quality,
-      );
-      if (compressed != null) {
-        compressedFiles.add(compressed);
-      }
-    }
-    
-    return compressedFiles;
-  }
-
-  Future<bool> deleteMultipleImages(List<File> files) async {
-    try {
-      for (File file in files) {
-        if (await file.exists()) {
-          await file.delete();
-        }
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Validation methods
-  bool validateImageSize(File file, {double maxSizeInMB = 10.0}) {
-    return getImageSizeInMB(file) <= maxSizeInMB;
-  }
-
-  bool validateImageDimensions(File file, {int? maxWidth, int? maxHeight}) {
-    // This would require additional packages like flutter_native_image
-    // For now, return true as a placeholder
-    return true;
-  }
-
-  List<String> validateImages(List<File> files, {
-    double maxSizeInMB = 10.0,
-    int? maxWidth,
-    int? maxHeight,
-  }) {
-    List<String> errors = [];
-    
-    for (int i = 0; i < files.length; i++) {
-      File file = files[i];
-      String fileName = getFileName(file);
-      
-      if (!isValidImage(file)) {
-        errors.add('$fileName: Invalid image format');
-      }
-      
-      if (!validateImageSize(file, maxSizeInMB: maxSizeInMB)) {
-        errors.add('$fileName: File size exceeds ${maxSizeInMB}MB');
-      }
-      
-      // Add dimension validation if needed
-      if (maxWidth != null || maxHeight != null) {
-        if (!validateImageDimensions(file, maxWidth: maxWidth, maxHeight: maxHeight)) {
-          errors.add('$fileName: Image dimensions too large');
-        }
-      }
-    }
-    
-    return errors;
+  void dispose() {
+    _documentScanner?.close();
+    _documentScanner = null;
   }
 }

@@ -4,7 +4,7 @@ import 'dart:io';
 // Import your files
 import '../models/registration_model.dart';
 import '../widgets/registration_widget.dart';
-import '../../../config/media/image_picker_service.dart';
+import '../../../config/media/image_picker_service.dart'; // Updated import
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -35,8 +35,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   final _qualificationController = TextEditingController();
   final _languagesController = TextEditingController();
 
-  // Image picker service
-  final ImagePickerService _imagePickerService = ImagePickerService();
+  // Document scanner service
+  final DocumentScannerService _documentScannerService = DocumentScannerService();
 
   @override
   void initState() {
@@ -49,6 +49,17 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
+    
+    // Initialize the document scanner
+    _initializeDocumentScanner();
+  }
+
+  Future<void> _initializeDocumentScanner() async {
+    try {
+      await _documentScannerService.initializeScanner();
+    } catch (e) {
+      debugPrint('Error initializing document scanner: $e');
+    }
   }
 
   @override
@@ -60,70 +71,72 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     _permanentAddressController.dispose();
     _qualificationController.dispose();
     _languagesController.dispose();
+    _documentScannerService.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage(String documentType) async {
+  Future<void> _scanDocument(String documentType) async {
     try {
-      File? image;
+      File? scannedImage;
       
       // Show loading indicator
       if (mounted) {
-        _showSnackBar('Picking image...', isError: false);
+        _showSnackBar('Preparing to scan...', isError: false);
       }
       
       if (documentType == 'selfie') {
-        // For selfie, only use camera
-        image = await _imagePickerService.pickImage(
+        // For selfie, use regular camera with front camera
+        scannedImage = await _documentScannerService.scanDocument(
           context: context,
-          sourceType: ImageSourceType.camera,
+          scanType: DocumentScanType.selfie,
           maxWidth: 1024,
           maxHeight: 1024,
           imageQuality: 90,
         );
       } else {
-        // For documents, allow both camera and gallery
-        image = await _imagePickerService.pickImage(
+        // For documents, use ML Kit document scanner
+        scannedImage = await _documentScannerService.scanDocument(
           context: context,
-          sourceType: ImageSourceType.both,
+          scanType: DocumentScanType.document,
           maxWidth: 1920,
           maxHeight: 1080,
-          imageQuality: 85,
+          imageQuality: 90,
         );
       }
       
-      if (image != null) {
+      if (scannedImage != null) {
         // Validate image
-        if (!_imagePickerService.isValidImage(image)) {
-          _showSnackBar('Please select a valid image file', isError: true);
+        if (!_documentScannerService.isValidImage(scannedImage)) {
+          _showSnackBar('Please capture a valid image', isError: true);
           return;
         }
         
         // Check file size
-        double sizeInMB = _imagePickerService.getImageSizeInMB(image);
+        double sizeInMB = _documentScannerService.getImageSizeInMB(scannedImage);
         if (sizeInMB > 10) {
           _showSnackBar('Image size should be less than 10MB', isError: true);
+          // Optionally delete the large file
+          await _documentScannerService.deleteImage(scannedImage);
           return;
         }
         
-        // Compress if needed
-        File? compressedImage = await _imagePickerService.compressImageIfNeeded(
-          context,
-          image,
-          maxSizeInMB: 5.0,
-          quality: 85,
-        );
-        
-        if (compressedImage != null && mounted) {
+        if (mounted) {
           setState(() {
-            _registrationData.updateDocument(documentType, compressedImage);
+            _registrationData.updateDocument(documentType, scannedImage);
           });
-          _showSnackBar('Image uploaded successfully!', isError: false);
+          
+          String successMessage = documentType == 'selfie' 
+              ? 'Selfie captured successfully!' 
+              : 'Document scanned successfully!';
+          _showSnackBar(successMessage, isError: false);
         }
+      } else {
+        // User cancelled or scanning failed - don't show error for cancellation
+        debugPrint('Document scanning cancelled or failed');
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Error picking image: ${e.toString()}', isError: true);
+        _showSnackBar('Error scanning document: ${e.toString()}', isError: true);
       }
     }
   }
@@ -380,9 +393,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
               validator: (value) =>
                   value?.isEmpty ?? true ? 'Current address is required' : null,
             ),
-            const SizedBox(height: 12),
-
-            _buildAddressCheckbox(),
             const SizedBox(height: 16),
 
             CustomTextField(
@@ -396,6 +406,10 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                   ? 'Permanent address is required'
                   : null,
             ),
+            
+            const SizedBox(height: 12),
+            _buildAddressCheckbox(),
+            
             const SizedBox(height: 16),
 
             Row(
@@ -451,7 +465,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
           children: [
             const SectionHeader(
               title: 'Documents & Vehicle',
-              subtitle: 'Upload required documents and select vehicle',
+              subtitle: 'Scan required documents and select vehicle',
             ),
             const SizedBox(height: 24),
 
@@ -473,7 +487,37 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            
+            // Info card about document scanning
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue.shade600,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Documents will be scanned automatically with proper alignment and cropping',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             ...DocumentType.requiredDocuments
                 .map(
@@ -484,7 +528,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                       uploadedFile: _registrationData.getDocument(
                         documentType.id,
                       ),
-                      onTap: () => _pickImage(documentType.id),
+                      onTap: () => _scanDocument(documentType.id),
                     ),
                   ),
                 )
