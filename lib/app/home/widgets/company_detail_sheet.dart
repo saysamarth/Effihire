@@ -50,15 +50,20 @@ class CompanyDetailsSheet extends StatelessWidget {
                     color: color.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  child: Image.asset(
-                    logoPath,
-                    fit: BoxFit
-                        .contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.business, color: color, size: 20);
-                    },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12), // slightly inside the container's radius
+                    child: Image.asset(
+                      logoPath,
+                      fit: BoxFit.cover, // Crop to fill
+                      cacheWidth: (60 * MediaQuery.of(context).devicePixelRatio).toInt(),
+                      cacheHeight: (60 * MediaQuery.of(context).devicePixelRatio).toInt(),
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.business, color: color, size: 20);
+                      },
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 15),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

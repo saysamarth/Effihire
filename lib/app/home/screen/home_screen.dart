@@ -16,18 +16,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _welcomeController;
   late AnimationController _cardController;
   late AnimationController _opportunitiesController;
-  
+
   late Animation<double> _welcomeAnimation;
   late Animation<double> _cardAnimation;
   late Animation<double> _opportunitiesAnimation;
-  
+
   String? selectedOpportunity;
-  
+
+  late double screenHeight;
+  late double screenWidth;
+  late List<Map<String, dynamic>> opportunities;
+
+  late TextStyle titleTextStyle;
+  late TextStyle buttonTextStyle;
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _startAnimations();
+    opportunities = OpportunityData.getOpportunityButtons();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final size = MediaQuery.of(context).size;
+    screenHeight = size.height;
+    screenWidth = size.width;
+
+    titleTextStyle = GoogleFonts.plusJakartaSans(
+      fontSize: screenWidth * 0.055,
+      fontWeight: FontWeight.w700,
+      color: Colors.black87,
+    );
+
+    buttonTextStyle = GoogleFonts.plusJakartaSans(
+      fontSize: screenWidth * 0.032,
+      fontWeight: FontWeight.w500,
+      color: const Color(0xFF5B3E86),
+    );
   }
 
   void _initializeAnimations() {
@@ -35,12 +63,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _cardController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _opportunitiesController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -49,11 +77,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _welcomeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _welcomeController, curve: Curves.easeOutBack),
     );
-    
+
     _cardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
     );
-    
+
     _opportunitiesAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _opportunitiesController, curve: Curves.easeOutCubic),
     );
@@ -61,13 +89,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _startAnimations() async {
     await Future.delayed(const Duration(milliseconds: 200));
-    _welcomeController.forward();
-    
+    if (mounted) _welcomeController.forward();
+
     await Future.delayed(const Duration(milliseconds: 300));
-    _cardController.forward();
-    
+    if (mounted) _cardController.forward();
+
     await Future.delayed(const Duration(milliseconds: 400));
-    _opportunitiesController.forward();
+    if (mounted) _opportunitiesController.forward();
   }
 
   @override
@@ -80,9 +108,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: SafeArea(
@@ -90,8 +115,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           child: Stack(
             children: [
-              _buildBackground(screenHeight),
-              _buildContent(screenWidth, screenHeight),
+              _BackgroundWidget(screenHeight: screenHeight),
+              _ContentWidget(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight,
+                welcomeAnimation: _welcomeAnimation,
+                cardAnimation: _cardAnimation,
+                opportunitiesAnimation: _opportunitiesAnimation,
+                opportunities: opportunities,
+                selectedOpportunity: selectedOpportunity,
+                onOpportunitySelected: _onOpportunitySelected,
+                onCompanyTap: _showCompanyDetails,
+                titleTextStyle: titleTextStyle,
+                buttonTextStyle: buttonTextStyle,
+              ),
             ],
           ),
         ),
@@ -99,7 +136,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildBackground(double screenHeight) {
+  void _onOpportunitySelected(String? opportunityName) {
+    setState(() {
+      selectedOpportunity = opportunityName;
+    });
+    if (opportunityName != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Selected: $opportunityName')),
+      );
+    }
+  }
+
+  void _showCompanyDetails(Opportunity opportunity) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CompanyDetailsSheet(
+        company: opportunity.name,
+        location: opportunity.location,
+        earning: opportunity.earning,
+        color: opportunity.color,
+        logoPath: opportunity.logoPath,
+      ),
+    );
+  }
+}
+
+class _BackgroundWidget extends StatelessWidget {
+  final double screenHeight;
+
+  const _BackgroundWidget({required this.screenHeight});
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
         ClipPath(
@@ -140,38 +210,99 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ],
     );
   }
+}
 
-  Widget _buildContent(double screenWidth, double screenHeight) {
+class _ContentWidget extends StatelessWidget {
+  final double screenWidth;
+  final double screenHeight;
+  final Animation<double> welcomeAnimation;
+  final Animation<double> cardAnimation;
+  final Animation<double> opportunitiesAnimation;
+  final List<Map<String, dynamic>> opportunities;
+  final String? selectedOpportunity;
+  final Function(String?) onOpportunitySelected;
+  final Function(Opportunity) onCompanyTap;
+  final TextStyle titleTextStyle;
+  final TextStyle buttonTextStyle;
+
+  const _ContentWidget({
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.welcomeAnimation,
+    required this.cardAnimation,
+    required this.opportunitiesAnimation,
+    required this.opportunities,
+    required this.selectedOpportunity,
+    required this.onOpportunitySelected,
+    required this.onCompanyTap,
+    required this.titleTextStyle,
+    required this.buttonTextStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: screenHeight * 0.02),
-          WelcomeSection(animation: _welcomeAnimation),
+          WelcomeSection(animation: welcomeAnimation),
           SizedBox(height: screenHeight * 0.015),
-          LocationSection(animation: _cardAnimation),
+          LocationSection(animation: cardAnimation),
           SizedBox(height: screenHeight * 0.025),
-          _buildOpportunitySection(),
+          _OpportunitySection(
+            animation: opportunitiesAnimation,
+            screenWidth: screenWidth,
+            opportunities: opportunities,
+            selectedOpportunity: selectedOpportunity,
+            onOpportunitySelected: onOpportunitySelected,
+            titleTextStyle: titleTextStyle,
+            buttonTextStyle: buttonTextStyle,
+          ),
           SizedBox(height: screenHeight * 0.02),
-          _buildEarningOpportunitiesSection(),
+          _EarningSection(
+            animation: opportunitiesAnimation,
+            screenWidth: screenWidth,
+            onCompanyTap: onCompanyTap,
+            titleTextStyle: titleTextStyle,
+            buttonTextStyle: buttonTextStyle,
+          ),
           SizedBox(height: screenHeight * 0.02),
         ],
       ),
     );
   }
+}
 
-  Widget _buildOpportunitySection() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final opportunities = OpportunityData.getOpportunityButtons();
+class _OpportunitySection extends StatelessWidget {
+  final Animation<double> animation;
+  final double screenWidth;
+  final List<Map<String, dynamic>> opportunities;
+  final String? selectedOpportunity;
+  final Function(String?) onOpportunitySelected;
+  final TextStyle titleTextStyle;
+  final TextStyle buttonTextStyle;
 
+  const _OpportunitySection({
+    required this.animation,
+    required this.screenWidth,
+    required this.opportunities,
+    required this.selectedOpportunity,
+    required this.onOpportunitySelected,
+    required this.titleTextStyle,
+    required this.buttonTextStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _opportunitiesAnimation,
+      animation: animation,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, 40 * (1 - _opportunitiesAnimation.value)),
+          offset: Offset(0, 40 * (1 - animation.value)),
           child: Opacity(
-            opacity: _opportunitiesAnimation.value.clamp(0.0, 1.0),
+            opacity: animation.value.clamp(0.0, 1.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -180,22 +311,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     Text(
                       'Choose Opportunity',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.055,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
+                      style: titleTextStyle,
                     ),
                     if (selectedOpportunity != null)
                       TextButton(
-                        onPressed: () => setState(() => selectedOpportunity = null),
+                        onPressed: () => onOpportunitySelected(null),
                         child: Text(
                           'Clear',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: screenWidth * 0.032,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF5B3E86),
-                          ),
+                          style: buttonTextStyle,
                         ),
                       ),
                   ],
@@ -204,6 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SizedBox(
                   height: screenWidth * 0.1,
                   child: ListView.builder(
+                    physics: BouncingScrollPhysics(),
                     scrollDirection: Axis.horizontal,
                     itemCount: opportunities.length,
                     itemBuilder: (context, index) {
@@ -213,17 +337,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: EdgeInsets.only(
                           right: index < opportunities.length - 1 ? screenWidth * 0.025 : 0,
                         ),
-                        child: OpportunityButton(
+                        child:  OpportunityButton(
                           name: opportunity['name'],
                           color: opportunity['color'],
                           logoPath: opportunity['logoPath'],
                           isSelected: isSelected,
                           onTap: () {
-                            setState(() {
-                              selectedOpportunity = isSelected ? null : opportunity['name'];
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Selected: ${opportunity['name']}')),
+                            onOpportunitySelected(
+                                isSelected ? null : opportunity['name']
                             );
                           },
                         ),
@@ -238,17 +359,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       },
     );
   }
+}
 
-  Widget _buildEarningOpportunitiesSection() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
+class _EarningSection extends StatelessWidget {
+  final Animation<double> animation;
+  final double screenWidth;
+  final Function(Opportunity) onCompanyTap;
+  final TextStyle titleTextStyle;
+  final TextStyle buttonTextStyle;
+
+  const _EarningSection({
+    required this.animation,
+    required this.screenWidth,
+    required this.onCompanyTap,
+    required this.titleTextStyle,
+    required this.buttonTextStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _opportunitiesAnimation,
+      animation: animation,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, 50 * (1 - _opportunitiesAnimation.value)),
+          offset: Offset(0, 50 * (1 - animation.value)),
           child: Opacity(
-            opacity: _opportunitiesAnimation.value.clamp(0.0, 1.0),
+            opacity: animation.value.clamp(0.0, 1.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -257,11 +393,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     Text(
                       'Earning Potential',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.055,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
+                      style: titleTextStyle,
                     ),
                     TextButton(
                       onPressed: () {
@@ -271,11 +403,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       },
                       child: Text(
                         'View All',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: screenWidth * 0.032,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF5B3E86),
-                        ),
+                        style: buttonTextStyle,
                       ),
                     ),
                   ],
@@ -295,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     final opportunity = OpportunityData.opportunities[index];
                     return EarningCard(
                       opportunity: opportunity,
-                      onTap: () => _showCompanyDetails(opportunity),
+                      onTap: () => onCompanyTap(opportunity),
                     );
                   },
                 ),
@@ -304,21 +432,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
       },
-    );
-  }
-
-  void _showCompanyDetails(Opportunity opportunity) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => CompanyDetailsSheet(
-        company: opportunity.name,
-        location: opportunity.location,
-        earning: opportunity.earning,
-        color: opportunity.color,
-        logoPath: opportunity.logoPath,
-      ),
     );
   }
 }
