@@ -19,112 +19,145 @@ class WelcomeSection extends StatelessWidget {
           offset: Offset(0, 50 * (1 - animation.value)),
           child: Opacity(
             opacity: animation.value.clamp(0.0, 1.0),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(screenWidth * 0.05),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: screenWidth * 0.07,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF5B3E86),
-                          ),
-                        ),
-                        SizedBox(height: screenWidth * 0.02),
-                        Text(
-                          'Find your perfect opportunity',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: screenWidth * 0.035,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        SizedBox(height: screenWidth * 0.03),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const RegistrationScreen(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5B3E86),
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.05,
-                              vertical: screenWidth * 0.025,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 3,
-                          ),
-                          child: Text(
-                            'Register now',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w600,
-                              fontSize: screenWidth * 0.035,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: screenWidth * 0.15,
-                    height: screenWidth * 0.15,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF8B5CF6), Color(0xFF5B3E86)],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF5B3E86).withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'E!',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: screenWidth * 0.06,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: child!,
           ),
         );
       },
+      child: _WelcomeContent(screenWidth: screenWidth),
+    );
+  }
+}
+
+class _WelcomeContent extends StatelessWidget {
+  final double screenWidth;
+  
+  const _WelcomeContent({required this.screenWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(screenWidth * 0.05),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(250),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            blurRadius: 15,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: screenWidth * 0.07,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF5B3E86),
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.02),
+                Text(
+                  'Find your perfect opportunity',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: screenWidth * 0.035,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.03),
+                _RegisterButton(screenWidth: screenWidth),
+              ],
+            ),
+          ),
+          _LogoCircle(screenWidth: screenWidth),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegisterButton extends StatelessWidget {
+  final double screenWidth;
+  
+  const _RegisterButton({required this.screenWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const RegistrationScreen(),
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF5B3E86),
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.05,
+          vertical: screenWidth * 0.025,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 3,
+      ),
+      child: Text(
+        'Register now',
+        style: GoogleFonts.plusJakartaSans(
+          fontWeight: FontWeight.w600,
+          fontSize: screenWidth * 0.035,
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoCircle extends StatelessWidget {
+  final double screenWidth;
+  
+  const _LogoCircle({required this.screenWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: screenWidth * 0.15,
+      height: screenWidth * 0.15,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B5CF6), Color(0xFF5B3E86)],
+        ),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5B3E86).withAlpha(75),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          'E!',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: screenWidth * 0.06,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -145,80 +178,92 @@ class LocationSection extends StatelessWidget {
           offset: Offset(0, 30 * (1 - animation.value)),
           child: Opacity(
             opacity: animation.value.clamp(0.0, 1.0),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Location clicked!')),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(screenWidth * 0.04),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(screenWidth * 0.025),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF5B3E86).withAlpha(25),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.location_on,
-                          color: const Color(0xFF5B3E86),
-                          size: screenWidth * 0.05,
-                        ),
-                      ),
-                      SizedBox(width: screenWidth * 0.03),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Current Location',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: screenWidth * 0.04,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              'Delhi, India',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: screenWidth * 0.032,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey,
-                        size: screenWidth * 0.035,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            child: child!,
           ),
         );
       },
+      child: _LocationContent(screenWidth: screenWidth),
+    );
+  }
+}
+
+class _LocationContent extends StatelessWidget {
+  final double screenWidth;
+  
+  const _LocationContent({required this.screenWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location clicked!')),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(screenWidth * 0.025),
+                decoration: BoxDecoration(
+                  color: const Color(0x195B3E86),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  color: const Color(0xFF5B3E86),
+                  size: screenWidth * 0.05,
+                ),
+              ),
+              SizedBox(width: screenWidth * 0.03),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Location',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: screenWidth * 0.04,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'Delhi, India',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: screenWidth * 0.032,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF757575),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey,
+                size: screenWidth * 0.035,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -226,7 +271,7 @@ class LocationSection extends StatelessWidget {
 class OpportunityButton extends StatelessWidget {
   final String name;
   final Color color;
- final String logoPath; 
+  final String logoPath; 
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -242,6 +287,8 @@ class OpportunityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final logoSize = screenWidth * 0.04;
+    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio).toInt();
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -257,15 +304,15 @@ class OpportunityButton extends StatelessWidget {
               vertical: screenWidth * 0.02,
             ),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.1) : Colors.white,
+              color: isSelected ? color.withAlpha(25) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: isSelected ? color : color.withOpacity(0.3),
+                color: isSelected ? color : color.withAlpha(75),
                 width: isSelected ? 2 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isSelected ? 0.15 : 0.08),
+                  color: Colors.black.withAlpha(isSelected ? 40 : 20),
                   blurRadius: isSelected ? 8 : 4,
                   offset: Offset(0, isSelected ? 4 : 2),
                 ),
@@ -274,20 +321,23 @@ class OpportunityButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Changed from Icon to Image.asset
-                Image.asset(
-                  logoPath,
-                  width: screenWidth * 0.04,
-                  height: screenWidth * 0.04,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    // Fallback icon if image fails to load
-                    return Icon(
-                      Icons.business,
-                      size: screenWidth * 0.04,
-                      color: isSelected ? color : color.withOpacity(0.8),
-                    );
-                  },
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: Image.asset(
+                    logoPath,
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.cover,
+                    cacheWidth: cacheSize,
+                    cacheHeight: cacheSize,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.business,
+                        size: logoSize,
+                        color: isSelected ? color : color.withAlpha(200),
+                      );
+                    },
+                  ),
                 ),
                 SizedBox(width: screenWidth * 0.015),
                 Text(
@@ -295,7 +345,7 @@ class OpportunityButton extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: screenWidth * 0.032,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: isSelected ? color : color.withOpacity(0.8),
+                    color: isSelected ? color : color.withAlpha(200),
                   ),
                 ),
               ],
@@ -320,6 +370,8 @@ class EarningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final logoSize = screenWidth * 0.08;
+    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio).toInt();
 
     return Material(
       color: Colors.transparent,
@@ -329,14 +381,14 @@ class EarningCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.all(screenWidth * 0.035),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.all(Radius.circular(16)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(20),
+                color: Color(0x14000000),
                 blurRadius: 12,
-                offset: const Offset(0, 4),
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -346,25 +398,24 @@ class EarningCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: screenWidth * 0.08,
-                    height: screenWidth * 0.08,
+                    width: logoSize,
+                    height: logoSize,
                     decoration: BoxDecoration(
                       color: opportunity.color.withAlpha(40),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.all(
-                        screenWidth * 0.01,
-                      ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
                       child: Image.asset(
                         opportunity.logoPath,
-                        fit: BoxFit
-                            .contain,
+                        fit: BoxFit.cover,
+                        cacheWidth: cacheSize,
+                        cacheHeight: cacheSize,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             Icons.business,
                             color: opportunity.color,
-                            size: screenWidth * 0.04,
+                            size: logoSize * 0.5,
                           );
                         },
                       ),
@@ -388,7 +439,7 @@ class EarningCard extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: screenWidth * 0.028,
                             fontWeight: FontWeight.w400,
-                            color: Colors.grey.shade600,
+                            color: const Color(0xFF757575),
                           ),
                         ),
                       ],
@@ -416,7 +467,7 @@ class EarningCard extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: screenWidth * 0.028,
                           fontWeight: FontWeight.w400,
-                          color: Colors.grey.shade600,
+                          color: const Color(0xFF757575),
                         ),
                       ),
                     ],

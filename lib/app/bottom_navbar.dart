@@ -1,36 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'profile/screens/profile_screen.dart';
-import 'home/screen/home_screen.dart'; // Add this import
+import 'home/screen/home_screen.dart';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
+  
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
 class _BottomNavBarState extends State<BottomNavBar> {
-  int _selectedIndex = 2; 
+  int _selectedIndex = 2;
   late final List<Widget> _pages;
   
-  // Firebase Auth instance
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  late final String? _userPhone;
 
-  @override
-  void initState() {
-    super.initState();
-    _pages = [
-      const Center(child: Text('Referral')),
-      const Center(child: Text('My Tasks')),
-      const HomeScreen(), // Replace placeholder with HomeScreen
-      const Center(child: Text('Payment')),
-      ProfileScreen(
-        userPhone: _auth.currentUser?.phoneNumber,
-      ),
-    ];
-  }
-
-  final List<IconData> _navigationIcons = [
+  static const List<IconData> _navigationIcons = [
     Icons.group,
     Icons.assignment,
     Icons.home,
@@ -38,18 +25,37 @@ class _BottomNavBarState extends State<BottomNavBar> {
     Icons.person,
   ];
 
+  @override
+  void initState() {
+    super.initState();
+
+    _userPhone = _auth.currentUser?.phoneNumber;
+
+    _pages = [
+      const _ReferralPage(),
+      const _TasksPage(),
+      const HomeScreen(),
+      const _PaymentPage(),
+      ProfileScreen(userPhone: _userPhone),
+    ];
+  }
+
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (_selectedIndex != index) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _pages[_selectedIndex],
-      
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: Container(
         height: 60,
         margin: const EdgeInsets.only(left: 12, right: 12, bottom: 24),
@@ -71,13 +77,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(_navigationIcons.length, (i) {
               return Expanded(
-                child: GestureDetector(
-                  onTap: () => _onItemTapped(i),
-                  child: Icon(
-                    _navigationIcons[i],
-                    color: i == _selectedIndex ? Colors.red : Colors.black54,
-                    size: i == _selectedIndex ? 32 : 26,
-                  ),
+                child: _NavItem(
+                  icon: _navigationIcons[i],
+                  index: i,
+                  isSelected: i == _selectedIndex,
+                  onTap: _onItemTapped,
                 ),
               );
             }),
@@ -86,4 +90,57 @@ class _BottomNavBarState extends State<BottomNavBar> {
       ),
     );
   }
-} 
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final int index;
+  final bool isSelected;
+  final Function(int) onTap;
+  
+  const _NavItem({
+    required this.icon,
+    required this.index,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onTap(index),
+      child: Icon(
+        icon,
+        color: isSelected ? Colors.red : Colors.black54,
+        size: isSelected ? 32 : 26,
+      ),
+    );
+  }
+}
+
+class _ReferralPage extends StatelessWidget {
+  const _ReferralPage();
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Referral'));
+  }
+}
+
+class _TasksPage extends StatelessWidget {
+  const _TasksPage();
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('My Tasks'));
+  }
+}
+
+class _PaymentPage extends StatelessWidget {
+  const _PaymentPage();
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Payment'));
+  }
+}
