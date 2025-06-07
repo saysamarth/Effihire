@@ -4,7 +4,8 @@ import 'dart:io';
 // Import your files
 import '../models/registration_model.dart';
 import '../widgets/registration_widget.dart';
-import '../../../config/media/image_picker_service.dart'; // Updated import
+import '../../../config/media/document_scanner_service.dart';
+import '../../../config/media/camera_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -36,7 +37,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   final _languagesController = TextEditingController();
 
   // Document scanner service
-  final DocumentScannerService _documentScannerService = DocumentScannerService();
+  final DocumentScannerService _documentScannerService =
+      DocumentScannerService();
+  final PhotoCaptureService _photoCaptureService = PhotoCaptureService();
 
   @override
   void initState() {
@@ -49,9 +52,10 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
-    
+
     // Initialize the document scanner
     _initializeDocumentScanner();
+    _initializePhotoCapture();
   }
 
   Future<void> _initializeDocumentScanner() async {
@@ -59,6 +63,14 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       await _documentScannerService.initializeScanner();
     } catch (e) {
       debugPrint('Error initializing document scanner: $e');
+    }
+  }
+
+  Future<void> _initializePhotoCapture() async {
+    try {
+      await _photoCaptureService.initializeService();
+    } catch (e) {
+      debugPrint('Error initializing photo capture: $e');
     }
   }
 
@@ -72,71 +84,61 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     _qualificationController.dispose();
     _languagesController.dispose();
     _documentScannerService.dispose();
+    _photoCaptureService.dispose();
     super.dispose();
   }
 
   Future<void> _scanDocument(String documentType) async {
     try {
       File? scannedImage;
-      
-      // Show loading indicator
-      if (mounted) {
-        _showSnackBar('Preparing to scan...', isError: false);
-      }
-      
+
       if (documentType == 'selfie') {
-        // For selfie, use regular camera with front camera
-        scannedImage = await _documentScannerService.scanDocument(
+        // Use PhotoCaptureService for selfie
+        scannedImage = await _photoCaptureService.captureSelfie(
           context: context,
-          scanType: DocumentScanType.selfie,
-          maxWidth: 1024,
-          maxHeight: 1024,
-          imageQuality: 90,
+          showPreview: true,
         );
       } else {
         // For documents, use ML Kit document scanner
         scannedImage = await _documentScannerService.scanDocument(
           context: context,
-          scanType: DocumentScanType.document,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 90,
         );
       }
-      
+
       if (scannedImage != null) {
         // Validate image
         if (!_documentScannerService.isValidImage(scannedImage)) {
-          _showSnackBar('Please capture a valid image', isError: true);
+          if (mounted) {
+            _documentScannerService.showSnackBar(
+              context,
+              'Please capture a valid image',
+              isError: true,
+            );
+          }
           return;
         }
-        
-        // Check file size
-        double sizeInMB = _documentScannerService.getImageSizeInMB(scannedImage);
-        if (sizeInMB > 10) {
-          _showSnackBar('Image size should be less than 10MB', isError: true);
-          // Optionally delete the large file
-          await _documentScannerService.deleteImage(scannedImage);
-          return;
-        }
-        
+
         if (mounted) {
           setState(() {
             _registrationData.updateDocument(documentType, scannedImage);
           });
-          
-          String successMessage = documentType == 'selfie' 
-              ? 'Selfie captured successfully!' 
+
+          String successMessage = documentType == 'selfie'
+              ? 'Selfie captured successfully!'
               : 'Document scanned successfully!';
-          _showSnackBar(successMessage, isError: false);
+
+          _documentScannerService.showSnackBar(context, successMessage);
         }
       } else {
-        // User cancelled or scanning failed - don't show error for cancellation
         debugPrint('Document scanning cancelled or failed');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Error scanning document: ${e.toString()}', isError: true);
+    }
+  } catch (e) {
+    if (mounted) {
+      _documentScannerService.showSnackBar(
+        context, 
+        'Error scanning document: ${e.toString()}', 
+        isError: true
+        );
       }
     }
   }
@@ -187,7 +189,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -195,7 +197,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
-        duration: Duration(seconds: isError ? 4 : 2),
+        duration: Duration(seconds: isError ? 2 : 1),
       ),
     );
   }
@@ -406,10 +408,10 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                   ? 'Permanent address is required'
                   : null,
             ),
-            
+
             const SizedBox(height: 12),
             _buildAddressCheckbox(),
-            
+
             const SizedBox(height: 16),
 
             Row(
@@ -488,7 +490,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
               ),
             ),
             const SizedBox(height: 8),
-            
+
             // Info card about document scanning
             Container(
               padding: const EdgeInsets.all(12),
