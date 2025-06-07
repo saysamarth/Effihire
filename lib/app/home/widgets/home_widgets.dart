@@ -2,7 +2,9 @@ import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
-import '../../../auth/location_service.dart';
+import '../../../auth/location_cubit.dart';
+import '../../../auth/location_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class WelcomeSection extends StatelessWidget {
   final Animation<double> animation;
@@ -188,160 +190,131 @@ class LocationSection extends StatelessWidget {
   }
 }
 
-class _LocationContent extends StatefulWidget {
+class _LocationContent extends StatelessWidget {
   final double screenWidth;
   
   const _LocationContent({required this.screenWidth});
 
-  @override
-  State<_LocationContent> createState() => _LocationContentState();
-}
-
-class _LocationContentState extends State<_LocationContent> {
-  String _locationText = 'Getting location...';
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLocation();
+  void _handleLocationTap(BuildContext context) {
+    // Show loading feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing location...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    // Refresh location using cubit
+    context.read<LocationCubit>().updateLocation();
   }
 
-  void _loadLocation() {
-    // Try to get cached location first
-    final cachedLocation = LocationService.getCachedLocation();
-    if (cachedLocation != null && cachedLocation.success) {
-      setState(() {
-        _locationText = cachedLocation.address ?? 'Location found';
-      });
+  String _getLocationText(LocationState state, BuildContext context) {
+    if (state is LocationLoading) {
+      return 'Getting location...';
+    } else if (state is LocationSuccess) {
+      return state.address;
+    } else if (state is LocationError) {
+      return 'Unable to get location';
     } else {
-      // If no cached location, set default text
-      setState(() {
-        _locationText = 'Location not available';
-      });
+      // LocationInitial or cached location
+      final cubit = context.read<LocationCubit>();
+      return cubit.currentAddress ?? 'Tap to get location';
     }
   }
 
-  Future<void> _refreshLocation() async {
-    setState(() {
-      _isLoading = true;
-      _locationText = 'Getting location...';
-    });
-
-    try {
-      final result = await LocationService.updateLocation();
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          if (result.success) {
-            _locationText = result.address ?? 'Location found';
-          } else {
-            _locationText = 'Unable to get location';
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _locationText = 'Location error';
-        });
-      }
-    }
+  bool _isLoading(LocationState state) {
+    return state is LocationLoading;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () async {
-          // Show loading feedback
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Refreshing location...'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-          
-          // Refresh location
-          await _refreshLocation();
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(widget.screenWidth * 0.04),
-          decoration: BoxDecoration(
-            color: Colors.white,
+    return BlocBuilder<LocationCubit, LocationState>(
+      builder: (context, state) {
+        final isLoading = _isLoading(state);
+        final locationText = _getLocationText(state, context);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isLoading ? null : () => _handleLocationTap(context),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(screenWidth * 0.04),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(widget.screenWidth * 0.025),
-                decoration: BoxDecoration(
-                  color: const Color(0x195B3E86),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _isLoading
-                    ? SizedBox(
-                        width: widget.screenWidth * 0.05,
-                        height: widget.screenWidth * 0.05,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            const Color(0xFF5B3E86),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(screenWidth * 0.025),
+                    decoration: BoxDecoration(
+                      color: const Color(0x195B3E86),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: isLoading
+                        ? SizedBox(
+                            width: screenWidth * 0.05,
+                            height: screenWidth * 0.05,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF5B3E86),
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.location_on,
+                            color: const Color(0xFF5B3E86),
+                            size: screenWidth * 0.05,
+                          ),
+                  ),
+                  SizedBox(width: screenWidth * 0.03),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Current Location',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
                           ),
                         ),
-                      )
-                    : Icon(
-                        Icons.location_on,
-                        color: const Color(0xFF5B3E86),
-                        size: widget.screenWidth * 0.05,
-                      ),
-              ),
-              SizedBox(width: widget.screenWidth * 0.03),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Location',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: widget.screenWidth * 0.04,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
+                        Text(
+                          locationText,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: screenWidth * 0.032,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF757575),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    Text(
-                      _locationText,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: widget.screenWidth * 0.032,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF757575),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!isLoading)
+                    Icon(
+                      Icons.refresh,
+                      color: Colors.grey,
+                      size: screenWidth * 0.035,
                     ),
-                  ],
-                ),
+                ],
               ),
-              Icon(
-                Icons.refresh,
-                color: Colors.grey,
-                size: widget.screenWidth * 0.035,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
