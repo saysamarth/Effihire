@@ -1,8 +1,9 @@
+import 'package:effihire/auth/location_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import '../app/bottom_navbar.dart';
+//import '../app/bottom_navbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -332,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen>
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => BottomNavBar()),
+            MaterialPageRoute(builder: (context) => LocationScreen()),
           );
         }
       } else {

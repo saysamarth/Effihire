@@ -2,6 +2,9 @@ import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
+import '../../../auth/location_cubit.dart';
+import '../../../auth/location_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class WelcomeSection extends StatelessWidget {
   final Animation<double> animation;
@@ -192,78 +195,126 @@ class _LocationContent extends StatelessWidget {
   
   const _LocationContent({required this.screenWidth});
 
+  void _handleLocationTap(BuildContext context) {
+    // Show loading feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing location...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    // Refresh location using cubit
+    context.read<LocationCubit>().updateLocation();
+  }
+
+  String _getLocationText(LocationState state, BuildContext context) {
+    if (state is LocationLoading) {
+      return 'Getting location...';
+    } else if (state is LocationSuccess) {
+      return state.address;
+    } else if (state is LocationError) {
+      return 'Unable to get location';
+    } else {
+      // LocationInitial or cached location
+      final cubit = context.read<LocationCubit>();
+      return cubit.currentAddress ?? 'Tap to get location';
+    }
+  }
+
+  bool _isLoading(LocationState state) {
+    return state is LocationLoading;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location clicked!')),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(screenWidth * 0.04),
-          decoration: BoxDecoration(
-            color: Colors.white,
+    return BlocBuilder<LocationCubit, LocationState>(
+      builder: (context, state) {
+        final isLoading = _isLoading(state);
+        final locationText = _getLocationText(state, context);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isLoading ? null : () => _handleLocationTap(context),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(screenWidth * 0.04),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(screenWidth * 0.025),
-                decoration: BoxDecoration(
-                  color: const Color(0x195B3E86),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.location_on,
-                  color: const Color(0xFF5B3E86),
-                  size: screenWidth * 0.05,
-                ),
-              ),
-              SizedBox(width: screenWidth * 0.03),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Location',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(screenWidth * 0.025),
+                    decoration: BoxDecoration(
+                      color: const Color(0x195B3E86),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    Text(
-                      'Delhi, India',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.032,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF757575),
-                      ),
+                    child: isLoading
+                        ? SizedBox(
+                            width: screenWidth * 0.05,
+                            height: screenWidth * 0.05,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF5B3E86),
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.location_on,
+                            color: const Color(0xFF5B3E86),
+                            size: screenWidth * 0.05,
+                          ),
+                  ),
+                  SizedBox(width: screenWidth * 0.03),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Current Location',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          locationText,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: screenWidth * 0.032,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF757575),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  if (!isLoading)
+                    Icon(
+                      Icons.refresh,
+                      color: Colors.grey,
+                      size: screenWidth * 0.035,
+                    ),
+                ],
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.grey,
-                size: screenWidth * 0.035,
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
