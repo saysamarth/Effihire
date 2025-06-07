@@ -2,6 +2,7 @@ import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
+import '../../../auth/location_service.dart';
 
 class WelcomeSection extends StatelessWidget {
   final Animation<double> animation;
@@ -187,25 +188,89 @@ class LocationSection extends StatelessWidget {
   }
 }
 
-class _LocationContent extends StatelessWidget {
+class _LocationContent extends StatefulWidget {
   final double screenWidth;
   
   const _LocationContent({required this.screenWidth});
+
+  @override
+  State<_LocationContent> createState() => _LocationContentState();
+}
+
+class _LocationContentState extends State<_LocationContent> {
+  String _locationText = 'Getting location...';
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  void _loadLocation() {
+    // Try to get cached location first
+    final cachedLocation = LocationService.getCachedLocation();
+    if (cachedLocation != null && cachedLocation.success) {
+      setState(() {
+        _locationText = cachedLocation.address ?? 'Location found';
+      });
+    } else {
+      // If no cached location, set default text
+      setState(() {
+        _locationText = 'Location not available';
+      });
+    }
+  }
+
+  Future<void> _refreshLocation() async {
+    setState(() {
+      _isLoading = true;
+      _locationText = 'Getting location...';
+    });
+
+    try {
+      final result = await LocationService.updateLocation();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (result.success) {
+            _locationText = result.address ?? 'Location found';
+          } else {
+            _locationText = 'Unable to get location';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _locationText = 'Location error';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
+          // Show loading feedback
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location clicked!')),
+            const SnackBar(
+              content: Text('Refreshing location...'),
+              duration: Duration(seconds: 1),
+            ),
           );
+          
+          // Refresh location
+          await _refreshLocation();
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.all(screenWidth * 0.04),
+          padding: EdgeInsets.all(widget.screenWidth * 0.04),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -220,18 +285,29 @@ class _LocationContent extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(screenWidth * 0.025),
+                padding: EdgeInsets.all(widget.screenWidth * 0.025),
                 decoration: BoxDecoration(
                   color: const Color(0x195B3E86),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  Icons.location_on,
-                  color: const Color(0xFF5B3E86),
-                  size: screenWidth * 0.05,
-                ),
+                child: _isLoading
+                    ? SizedBox(
+                        width: widget.screenWidth * 0.05,
+                        height: widget.screenWidth * 0.05,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            const Color(0xFF5B3E86),
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.location_on,
+                        color: const Color(0xFF5B3E86),
+                        size: widget.screenWidth * 0.05,
+                      ),
               ),
-              SizedBox(width: screenWidth * 0.03),
+              SizedBox(width: widget.screenWidth * 0.03),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,26 +315,28 @@ class _LocationContent extends StatelessWidget {
                     Text(
                       'Current Location',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.04,
+                        fontSize: widget.screenWidth * 0.04,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
                     Text(
-                      'Delhi, India',
+                      _locationText,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: screenWidth * 0.032,
+                        fontSize: widget.screenWidth * 0.032,
                         fontWeight: FontWeight.w400,
                         color: const Color(0xFF757575),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               Icon(
-                Icons.arrow_forward_ios,
+                Icons.refresh,
                 color: Colors.grey,
-                size: screenWidth * 0.035,
+                size: widget.screenWidth * 0.035,
               ),
             ],
           ),
