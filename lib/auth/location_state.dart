@@ -1,8 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:geolocator/geolocator.dart';
 
-/// Base class for all location states
-/// Using Equatable for efficient state comparison and preventing unnecessary rebuilds
 abstract class LocationState extends Equatable {
   const LocationState();
 
@@ -10,12 +8,10 @@ abstract class LocationState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Initial state when the location screen first loads
 class LocationInitial extends LocationState {
   const LocationInitial();
 }
 
-/// Loading state during location acquisition
 class LocationLoading extends LocationState {
   final String message;
   
@@ -27,7 +23,6 @@ class LocationLoading extends LocationState {
   List<Object?> get props => [message];
 }
 
-/// Success state when location is successfully obtained
 class LocationSuccess extends LocationState {
   final Position position;
   final String address;
@@ -48,7 +43,6 @@ class LocationSuccess extends LocationState {
   ];
 }
 
-/// Error state for various location-related failures
 class LocationError extends LocationState {
   final LocationErrorType errorType;
   final String title;
@@ -74,8 +68,6 @@ class LocationError extends LocationState {
   ];
 }
 
-/// Enumeration of possible location error types
-/// Simplified from the original enum for better organization
 enum LocationErrorType {
   permissionDenied,
   permissionDeniedForever,
