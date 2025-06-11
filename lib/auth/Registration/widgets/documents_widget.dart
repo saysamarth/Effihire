@@ -1,8 +1,111 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:io';
 import '../models/registration_model.dart';
+import 'dart:io';
 import '../models/ocr_model.dart';
+import 'common.dart';
+
+class DocumentsStepWidget extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final String? selectedVehicle;
+  final RegistrationData registrationData;
+  final Function(String) onVehicleSelected;
+  final Function(String) onDocumentScan;
+
+  const DocumentsStepWidget({
+    super.key,
+    required this.formKey,
+    required this.selectedVehicle,
+    required this.registrationData,
+    required this.onVehicleSelected,
+    required this.onDocumentScan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(
+              title: 'Documents & Vehicle',
+              subtitle: 'Scan required documents and select vehicle',
+            ),
+            const SizedBox(height: 24),
+
+            VehicleSelectionGrid(
+              selectedVehicle: selectedVehicle,
+              onVehicleSelected: onVehicleSelected,
+            ),
+            const SizedBox(height: 32),
+
+            Text(
+              'Required Documents',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            _buildDocumentInfoCard(),
+            const SizedBox(height: 16),
+
+            ...DocumentType.requiredDocuments
+                .map(
+                  (documentType) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: DocumentUploadCard(
+                      documentType: documentType,
+                      uploadedFile: registrationData.getDocument(
+                        documentType.id,
+                      ),
+                      onTap: () => onDocumentScan(documentType.id),
+                    ),
+                  ),
+                )
+                .toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.blue.shade600,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Documents will be scanned automatically with proper alignment and cropping',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: Colors.blue.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class VehicleSelectionGrid extends StatelessWidget {
   final String? selectedVehicle;
@@ -528,157 +631,6 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class GenderSelectionWidget extends StatelessWidget {
-  final String? selectedGender;
-  final Function(String) onGenderSelected;
-  
-  const GenderSelectionWidget({
-    super.key,
-    required this.selectedGender,
-    required this.onGenderSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Gender',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Row(
-            children: AppConstants.genderOptions.map((gender) {
-              final isSelected = selectedGender == gender;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onGenderSelected(gender),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppConstants.primaryColor : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        gender,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  
-  const SectionHeader({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: AppConstants.primaryColor,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class CustomTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final IconData icon;
-  final int maxLines;
-  final bool enabled;
-  final String? Function(String?)? validator;
-  
-  const CustomTextField({
-    super.key,
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.icon,
-    this.maxLines = 1,
-    this.enabled = true,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      enabled: enabled,
-      validator: validator,
-      style: GoogleFonts.plusJakartaSans(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, color: AppConstants.primaryColor, size: 20),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppConstants.primaryColor, width: 2),
-        ),
-        filled: true,
-        fillColor: enabled ? Colors.white : Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

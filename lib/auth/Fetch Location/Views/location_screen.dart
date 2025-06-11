@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'location_cubit.dart';
-import 'location_state.dart';
-import '../app/bottom_navbar.dart';
+import '../Location Cubit/location_cubit.dart';
+import '../Location Cubit/location_state.dart';
+import '../../../app/bottom_navbar.dart';
 
 class LocationScreen extends StatefulWidget {
   const LocationScreen({super.key});

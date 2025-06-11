@@ -3,8 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'auth/splash_screen.dart';
-import 'auth/location_cubit.dart';
-import 'auth/location_service.dart';
+import 'auth/Fetch Location/Location Cubit/location_cubit.dart';
+import 'auth/Fetch Location/Location Cubit/location_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

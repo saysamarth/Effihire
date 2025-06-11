@@ -2,8 +2,8 @@ import 'package:effihire/auth/Registration/views/registration_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
-import '../../../auth/location_cubit.dart';
-import '../../../auth/location_state.dart';
+import '../../../auth/Fetch Location/Location Cubit/location_cubit.dart';
+import '../../../auth/Fetch Location/Location Cubit/location_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class WelcomeSection extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
-import 'location_screen.dart';
+import './Fetch Location/Views/location_screen.dart';
 import 'dart:math';
 import 'package:google_fonts/google_fonts.dart';
 
