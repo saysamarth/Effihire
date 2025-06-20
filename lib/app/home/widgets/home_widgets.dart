@@ -1,4 +1,5 @@
-import 'package:effihire/auth/Registration/views/registration_screen.dart';
+//import 'package:effihire/auth/Registration/views/registration_screen.dart';
+import 'package:effihire/auth/Bank%20Registration/screens/bank_detail_input_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
@@ -99,7 +100,7 @@ class _RegisterButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => const RegistrationScreen(),
+            builder: (context) => const BankDetailsScreen()//RegistrationScreen(),
           ),
         );
       },
