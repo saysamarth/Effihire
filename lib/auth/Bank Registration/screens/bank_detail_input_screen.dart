@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 
-
 import '../services/bank_controller.dart';
+import 'bank_info_card.dart';
+import '../widgets/bank_conformation.dart';
 import '../../../common widgets/snackbar_helper.dart';
 import '../../../config/colors/app_colors.dart';
 import 'bank_review_screen.dart';
@@ -17,7 +18,6 @@ class BankDetailsScreen extends StatefulWidget {
 
 class _BankDetailsScreenState extends State<BankDetailsScreen>
     with TickerProviderStateMixin {
-  
   // Controllers and Keys
   final _formKey = GlobalKey<FormState>();
   final _accountNumberController = TextEditingController();
@@ -29,12 +29,17 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
   // Animations
   late AnimationController _slideAnimationController;
   late Animation<Offset> _slideAnimation;
+  
+  // Focus nodes for better UX
+  final _ifscFocusNode = FocusNode();
+  final _accountFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _controller = BankVerificationController();
     _initializeAnimations();
+    _setupFocusListeners();
   }
 
   void _initializeAnimations() {
@@ -54,56 +59,106 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
     _slideAnimationController.forward();
   }
 
+  void _setupFocusListeners() {
+    _ifscController.addListener(_onIFSCChanged); // Listen for IFSC field changes to trigger auto-fetch
+  }
+
+  void _onIFSCChanged() {
+    final ifscCode = _ifscController.text.trim();
+    if (ifscCode.length == 11 && _controller.validateIFSCFormat(ifscCode)) {
+      _controller.clearBankDetails();
+      _fetchBankDetails();
+    } else if (ifscCode.length < 11) {
+      _controller.clearBankDetails();
+    }
+  }
+
   @override
   void dispose() {
     _accountNumberController.dispose();
     _ifscController.dispose();
     _controller.dispose();
     _slideAnimationController.dispose();
+    _ifscFocusNode.dispose();
+    _accountFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _verifyBankDetails() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _fetchBankDetails() async {
+    final ifscCode = _ifscController.text.trim().toUpperCase();
+    
+    if (!_controller.validateIFSCFormat(ifscCode)) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Please enter a valid 11-character IFSC code',
+      );
       return;
     }
-
-       try {
-      final success = await _controller.verifyBankAccount(
-        accountNumber: _accountNumberController.text.trim(),
-        ifscCode: _ifscController.text.trim().toUpperCase(),
-      );
-
-      if (mounted) { // Check if widget is still mounted
-        if (success) {
-          // Navigate to review screen with bank data
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BankReviewScreen(
-                accountNumber: _accountNumberController.text.trim(),
-                ifscCode: _ifscController.text.trim().toUpperCase(),
-                bankData: _controller.verifiedBankData,
-              ),
-            ),
-          );
-        } else {
-          SnackbarHelper.showErrorSnackBar(
-            context,
-            'Failed to verify bank details. Please check and try again.',
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+    final success = await _controller.fetchBankDetails(ifscCode); 
+    if (mounted) {
+      if (!success && _controller.bankInfoError != null) {
         SnackbarHelper.showErrorSnackBar(
           context,
-          'An error occurred during verification: ${e.toString()}',
+          _controller.bankInfoError!,
         );
       }
     }
   }
 
+  void _onEditBankDetails() {
+    _controller.clearBankDetails();
+    _ifscFocusNode.requestFocus();
+  }
+
+  // UPDATED: Bank verification method (penny drop)
+  // Replace the _verifyBankDetails method in bank_detail_input_screen.dart
+Future<void> _verifyBankDetails() async {
+
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
+
+  if (!_controller.canProceedToVerification) {
+    SnackbarHelper.showErrorSnackBar(
+      context,
+      'Please confirm the bank details before proceeding',
+    );
+    return;
+  }
+
+  try {
+    final success = await _controller.verifyBankAccount(
+      accountNumber: _accountNumberController.text.trim(),
+      ifscCode: _ifscController.text.trim().toUpperCase(),
+    );
+    if (mounted) {
+      if (success && _controller.verifiedBankData != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BankReviewScreen(
+              accountNumber: _accountNumberController.text.trim(),
+              ifscCode: _ifscController.text.trim().toUpperCase(),
+              bankData: _controller.verifiedBankData!,
+            ),
+          ),
+        );
+      } else {
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          _controller.verificationError ?? 'Verification failed. Please try again.',
+        );
+      }
+    }
+  } catch (e) {
+    if (mounted) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'An error occurred during verification: ${e.toString()}',
+      );
+    }
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -125,7 +180,30 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
                     subtitle: 'Enter your bank account details for verification',
                   ),
                   const SizedBox(height: 32),
-                  _buildBankInputForm(),
+                  
+                  _buildBankInputForm(), // SECTION 1: Input Form
+
+                  if (_controller.isFetchingBankInfo) 
+                    const BankInfoLoadingCard(), // SECTION 2: Bank Information Display
+                  
+                  if (_controller.hasBankInfo && _controller.fetchedBankDetails != null)
+                    BankInfoCard(
+                      bankDetails: _controller.fetchedBankDetails!,
+                      onEdit: _onEditBankDetails,
+                    ),
+                  
+
+                  if (_controller.hasBankInfo)
+                    BankConfirmationWidget(    // SECTION 3: Confirmation Widget
+                      isConfirmed: _controller.isConfirmed,
+                      onConfirmationChanged: _controller.setConfirmation,
+                    ),
+
+                  if (_controller.hasBankInfo)
+                    const SizedBox(height: 20),
+                  
+                  if (_controller.hasBankInfo)
+                    _buildVerifyButton(), // SECTION 4: Verify Button
                 ],
               ),
             ),
@@ -170,9 +248,7 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
         children: [
           _buildBankAccountField(),
           const SizedBox(height: 20),
-          _buildIFSCField(),
-          const SizedBox(height: 32),
-          _buildVerifyButton(),
+          _buildIFSCFieldWithButton(),
         ],
       ),
     );
@@ -181,8 +257,10 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
   Widget _buildBankAccountField() {
     return TextFormField(
       controller: _accountNumberController,
+      focusNode: _accountFocusNode,
       keyboardType: TextInputType.number,
       style: GoogleFonts.plusJakartaSans(fontSize: 15),
+      enabled: !_controller.isConfirmed,
       decoration: InputDecoration(
         labelText: 'Bank Account Number',
         hintText: 'Enter your bank account number',
@@ -203,8 +281,12 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppConstants.primaryColor, width: 2),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _controller.isConfirmed ? Colors.grey.shade50 : Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: (value) {
@@ -219,49 +301,65 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
     );
   }
 
-  Widget _buildIFSCField() {
-    return TextFormField(
-      controller: _ifscController,
-      textCapitalization: TextCapitalization.characters,
-      style: GoogleFonts.plusJakartaSans(fontSize: 15),
-      decoration: InputDecoration(
-        labelText: 'IFSC Code',
-        hintText: 'Enter IFSC code (e.g., SBIN0001234)',
-        prefixIcon: const Icon(
-          Icons.location_city,
-          color: AppConstants.primaryColor,
-          size: 20,
+  Widget _buildIFSCFieldWithButton() {
+    return Column(
+      children: [
+        TextFormField(
+          controller: _ifscController,
+          focusNode: _ifscFocusNode,
+          textCapitalization: TextCapitalization.characters,
+          style: GoogleFonts.plusJakartaSans(fontSize: 15),
+          enabled: !_controller.isConfirmed,
+          decoration: InputDecoration(
+            labelText: 'IFSC Code',
+            hintText: 'Enter IFSC code (e.g., SBIN0001234)',
+            prefixIcon: const Icon(
+              Icons.location_city,
+              color: AppConstants.primaryColor,
+              size: 20,
+            ),
+            suffixIcon: _controller.isConfirmed ? 
+              const Icon(Icons.check_circle, color: Colors.green) :
+              (_ifscController.text.length == 11 && !_controller.isFetchingBankInfo ?
+                IconButton(
+                  icon: const Icon(Icons.search, color: AppConstants.primaryColor),
+                  onPressed: _fetchBankDetails,
+                  tooltip: 'Get Bank Info',
+                ) : null),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppConstants.primaryColor, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            filled: true,
+            fillColor: _controller.isConfirmed ? Colors.grey.shade50 : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'IFSC code is required';
+            }
+            if (value!.length != 11) {
+              return 'IFSC code must be 11 characters';
+            }
+            if (!_controller.validateIFSCFormat(value)) {
+              return 'Please enter a valid IFSC code';
+            }
+            return null;
+          },
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppConstants.primaryColor, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      validator: (value) {
-        if (value?.isEmpty ?? true) {
-          return 'IFSC code is required';
-        }
-        if (value!.length != 11) {
-          return 'IFSC code must be 11 characters';
-        }
-        // Basic IFSC pattern validation
-        final ifscPattern = RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$');
-        if (!ifscPattern.hasMatch(value)) {
-          return 'Please enter a valid IFSC code';
-        }
-        return null;
-      },
+      ],
     );
   }
 
@@ -270,15 +368,19 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _controller.isLoading ? null : _verifyBankDetails,
+        onPressed: _controller.canProceedToVerification && !_controller.isVerifying 
+          ? _verifyBankDetails 
+          : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppConstants.primaryColor,
+          backgroundColor: _controller.canProceedToVerification 
+            ? AppConstants.primaryColor 
+            : Colors.grey.shade300,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0,
         ),
-        child: _controller.isLoading
+        child: _controller.isVerifying
             ? const SizedBox(
                 width: 20,
                 height: 20,
@@ -288,11 +390,13 @@ class _BankDetailsScreenState extends State<BankDetailsScreen>
                 ),
               )
             : Text(
-                'Verify Bank Details',
+                'Verify Bank Account',
                 style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
-                  color: Colors.white,
+                  color: _controller.canProceedToVerification 
+                    ? Colors.white 
+                    : Colors.grey.shade600,
                 ),
               ),
       ),

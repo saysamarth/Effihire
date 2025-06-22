@@ -7,35 +7,29 @@ import 'package:flutter/foundation.dart';
 import '../models/bank_model.dart';
 
 class BankVerificationService {
-  // API Configuration
   static const String _baseUrl = 'https://your-api-base-url.com';
   static const String _verifyEndpoint = '/api/bank/verify';
   static const String _submitEndpoint = '/api/bank/submit';
   static const Duration _timeoutDuration = Duration(seconds: 30);
 
-  // Headers for API calls
   static Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    // Add your authentication headers here
     // 'Authorization': 'Bearer ${AuthService.getToken()}',
     // 'X-API-Key': 'your-api-key',
   };
 
   /// Verify bank account details using Razorpay penny drop
-  /// 
   /// [accountNumber] - The bank account number to verify
   /// [ifscCode] - The IFSC code of the bank
-  /// [userId] - Optional user ID for tracking
-  /// 
   /// Returns [BankVerificationResponse] with verification result
+
   static Future<BankVerificationResponse> verifyBankAccount({
     required String accountNumber,
     required String ifscCode,
     String? userId,
   }) async {
     try {
-      // Validate input
       if (!_isValidAccountNumber(accountNumber)) {
         return BankVerificationResponse(
           success: false,
@@ -52,7 +46,6 @@ class BankVerificationService {
         );
       }
 
-      // Create request payload
       final request = BankVerificationRequest(
         accountNumber: accountNumber,
         ifscCode: ifscCode.toUpperCase(),
@@ -68,7 +61,6 @@ class BankVerificationService {
           )
           .timeout(_timeoutDuration);
 
-      // Parse response
       return _parseVerificationResponse(response);
 
     } on SocketException {
@@ -100,10 +92,9 @@ class BankVerificationService {
   }
 
   /// Submit verified bank details to backend
-  /// 
   /// [bankData] - The verified bank data to submit
-  /// 
   /// Returns [bool] indicating success or failure
+
   static Future<bool> submitBankDetails({
     required BankVerificationData bankData,
   }) async {
@@ -135,7 +126,6 @@ class BankVerificationService {
     }
   }
 
-  /// Parse the verification API response
   static BankVerificationResponse _parseVerificationResponse(http.Response response) {
     try {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -183,7 +173,6 @@ class BankVerificationService {
     }
   }
 
-  /// Parse the submission API response
   static bool _parseSubmissionResponse(http.Response response) {
     try {
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -197,20 +186,17 @@ class BankVerificationService {
     }
   }
 
-  /// Validate account number format
   static bool _isValidAccountNumber(String accountNumber) {
     if (accountNumber.isEmpty) return false;
     if (accountNumber.length < 9 || accountNumber.length > 18) return false;
     return RegExp(r'^[0-9]+$').hasMatch(accountNumber);
   }
 
-  /// Validate IFSC code format
   static bool _isValidIFSC(String ifsc) {
     if (ifsc.isEmpty || ifsc.length != 11) return false;
     return RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}$').hasMatch(ifsc);
   }
 
-  /// Get user-friendly error message based on error code
   static String getUserFriendlyErrorMessage(String? errorCode) {
     switch (errorCode) {
       case 'INVALID_ACCOUNT_NUMBER':
@@ -242,7 +228,6 @@ class BankVerificationService {
     }
   }
 
-  /// Retry mechanism for failed requests
   static Future<BankVerificationResponse> retryVerification({
     required String accountNumber,
     required String ifscCode,
@@ -262,14 +247,11 @@ class BankVerificationService {
         return lastResponse;
       }
 
-      // Don't retry for client errors
       if (lastResponse.errorCode != null &&
           ['INVALID_ACCOUNT_NUMBER', 'INVALID_IFSC', 'UNAUTHORIZED', 'BAD_REQUEST']
               .contains(lastResponse.errorCode)) {
         break;
       }
-
-      // Wait before retrying (exponential backoff)
       if (attempt < maxRetries) {
         await Future.delayed(Duration(seconds: attempt * 2));
       }

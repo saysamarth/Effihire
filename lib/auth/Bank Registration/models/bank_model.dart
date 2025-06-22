@@ -62,6 +62,52 @@ class BankVerificationData {
       verificationDate: verificationDate ?? this.verificationDate,
     );
   }
+
+  // NEW: Helper method to create mock data for testing
+  factory BankVerificationData.createMock({
+    required String accountNumber,
+    required String ifscCode,
+    String? bankName,
+    String? branch,
+    String? accountHolderName,
+  }) {
+    return BankVerificationData(
+      accountNumber: accountNumber,
+      ifscCode: ifscCode,
+      accountHolderName: accountHolderName ?? 'Mock Account Holder',
+      bankName: bankName,
+      branch: branch,
+      isVerified: true,
+      verificationDate: DateTime.now(),
+    );
+  }
+
+  // NEW: Helper method to check if data is complete
+  bool get isComplete {
+    return accountNumber.isNotEmpty && 
+           ifscCode.isNotEmpty && 
+           isVerified;
+  }
+
+  // NEW: Helper method to get display name
+  String get displayName {
+    if (accountHolderName != null && accountHolderName!.isNotEmpty) {
+      return accountHolderName!;
+    }
+    return 'Account Holder';
+  }
+
+  // NEW: Helper method to get bank display info
+  String get bankDisplayInfo {
+    final parts = <String>[];
+    if (bankName != null && bankName!.isNotEmpty) {
+      parts.add(bankName!);
+    }
+    if (branch != null && branch!.isNotEmpty) {
+      parts.add(branch!);
+    }
+    return parts.isEmpty ? 'Bank Information' : parts.join(' - ');
+  }
 }
 
 class BankVerificationRequest {

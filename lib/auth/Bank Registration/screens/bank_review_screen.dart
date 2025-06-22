@@ -25,7 +25,6 @@ class BankReviewScreen extends StatefulWidget {
 
 class _BankReviewScreenState extends State<BankReviewScreen>
     with TickerProviderStateMixin {
-  
   bool _isDetailsConfirmed = false;
   bool _isSubmitting = false;
   late BankVerificationController _controller;
@@ -41,10 +40,6 @@ class _BankReviewScreenState extends State<BankReviewScreen>
 
   void _initializeController() {
     _controller = BankVerificationController();
-    if (widget.bankData != null) {
-      _controller.setVerifiedBankData(widget.bankData);
-      _controller.setVerificationStatus(true);
-    }
   }
 
   void _initializeAnimations() {
@@ -57,13 +52,18 @@ class _BankReviewScreenState extends State<BankReviewScreen>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut));
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0)
-        .animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
+    );
 
     _fadeController.forward();
-    Future.delayed(const Duration(milliseconds: 200), () => _scaleController.forward());
+    Future.delayed(
+      const Duration(milliseconds: 200),
+      () => _scaleController.forward(),
+    );
   }
 
   @override
@@ -76,30 +76,45 @@ class _BankReviewScreenState extends State<BankReviewScreen>
 
   Future<void> _submitBankDetails() async {
     if (!_isDetailsConfirmed) {
-      SnackbarHelper.showErrorSnackBar(context, 'Please confirm your bank details before submitting.');
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Please confirm your bank details before submitting.',
+      );
       return;
     }
 
     if (widget.bankData == null) {
-      SnackbarHelper.showErrorSnackBar(context, 'Bank verification data is missing. Please verify again.');
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Bank verification data is missing. Please verify again.',
+      );
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
-      _controller.updateConfirmationStatus(true);
-      final success = await _controller.submitBankDetails();
-      
-      if (success) {
+      // Simulate submission process (replace with your actual API call)
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Show success message
+      SnackbarHelper.showSuccessSnackBar(
+        context,
+        'Bank details submitted successfully!',
+      );
+
+      // Navigate back (you can adjust this based on your navigation flow)
+      if (mounted) {
         Navigator.of(context).pop();
-        Navigator.of(context).pop();
-      } else {
-        String errorMessage = _controller.errorMessage ?? 'Failed to submit bank details. Please try again.';
-        SnackbarHelper.showErrorSnackBar(context, errorMessage);
+        Navigator.of(context).pop(); // Go back to previous screen
+        // Or if you want to go back to the main screen:
+        // Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      SnackbarHelper.showErrorSnackBar(context, 'An error occurred: ${e.toString()}');
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'An error occurred: ${e.toString()}',
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -118,7 +133,10 @@ class _BankReviewScreenState extends State<BankReviewScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ScaleTransition(scale: _scaleAnimation, child: _buildSuccessHeader()),
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: _buildSuccessHeader(),
+              ),
               const SizedBox(height: 20),
               _buildBankDetailsCard(),
               const SizedBox(height: 18),
@@ -137,7 +155,11 @@ class _BankReviewScreenState extends State<BankReviewScreen>
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: AppConstants.primaryColor, size: 20),
+        icon: const Icon(
+          Icons.arrow_back_ios,
+          color: AppConstants.primaryColor,
+          size: 20,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
@@ -162,7 +184,10 @@ class _BankReviewScreenState extends State<BankReviewScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.green.shade50, Colors.green.shade100.withOpacity(0.3)],
+          colors: [
+            Colors.green.shade50,
+            Colors.green.shade100.withOpacity(0.3),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -216,7 +241,11 @@ class _BankReviewScreenState extends State<BankReviewScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.account_balance, color: AppConstants.primaryColor, size: 22),
+              Icon(
+                Icons.account_balance,
+                color: AppConstants.primaryColor,
+                size: 22,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Bank Account Details',
@@ -237,17 +266,33 @@ class _BankReviewScreenState extends State<BankReviewScreen>
 
   List<Widget> _buildDetailRows() {
     final details = [
-      ('Account Holder Name', widget.bankData?.accountHolderName ?? 'John Doe', Icons.person_outline),
-      ('Bank Name', widget.bankData?.bankName ?? 'State Bank of India', Icons.account_balance_outlined),
-      ('Branch', widget.bankData?.branch ?? 'New Delhi Main Branch', Icons.location_city_outlined),
-      ('Account Number', _maskAccountNumber(widget.accountNumber), Icons.credit_card_outlined),
+      (
+        'Account Holder Name',
+        widget.bankData?.accountHolderName ?? 'John Doe',
+        Icons.person_outline,
+      ),
+      (
+        'Bank Name',
+        widget.bankData?.bankName ?? 'State Bank of India',
+        Icons.account_balance_outlined,
+      ),
+      (
+        'Branch',
+        widget.bankData?.branch ?? 'New Delhi Main Branch',
+        Icons.location_city_outlined,
+      ),
+      (
+        'Account Number',
+        _maskAccountNumber(widget.accountNumber),
+        Icons.credit_card_outlined,
+      ),
       ('IFSC Code', widget.ifscCode, Icons.code),
     ];
 
     return details.asMap().entries.map((entry) {
       final isLast = entry.key == details.length - 1;
       final (label, value, icon) = entry.value;
-      
+
       return Padding(
         padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
         child: Row(
@@ -311,9 +356,12 @@ class _BankReviewScreenState extends State<BankReviewScreen>
             height: 20,
             child: Checkbox(
               value: _isDetailsConfirmed,
-              onChanged: (value) => setState(() => _isDetailsConfirmed = value ?? false),
+              onChanged: (value) =>
+                  setState(() => _isDetailsConfirmed = value ?? false),
               activeColor: AppConstants.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(3),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -364,10 +412,16 @@ class _BankReviewScreenState extends State<BankReviewScreen>
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: _isSubmitting ? null : (_isDetailsConfirmed ? _submitBankDetails : null),
+            onPressed: _isSubmitting
+                ? null
+                : (_isDetailsConfirmed ? _submitBankDetails : null),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isDetailsConfirmed ? AppConstants.primaryColor : Colors.grey.shade400,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: _isDetailsConfirmed
+                  ? AppConstants.primaryColor
+                  : Colors.grey.shade400,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
             ),
             child: _isSubmitting
@@ -379,7 +433,9 @@ class _BankReviewScreenState extends State<BankReviewScreen>
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -396,7 +452,11 @@ class _BankReviewScreenState extends State<BankReviewScreen>
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Confirm & Submit',

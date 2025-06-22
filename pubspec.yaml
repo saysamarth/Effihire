@@ -45,6 +45,8 @@ dependencies:
   geocoding: ^2.1.1
   equatable: ^2.0.7
   flutter_bloc: ^9.1.1
+  razorpay_ifsc: ^1.1.1
+  http: ^1.1.0
 
 dev_dependencies:
   flutter_test:

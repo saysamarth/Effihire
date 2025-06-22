@@ -1,281 +1,165 @@
 import 'package:flutter/foundation.dart';
-import 'dart:async';
-
+import 'ifsc_service.dart';
 import '../models/bank_model.dart';
-import 'bank_service.dart';
 
 class BankVerificationController extends ChangeNotifier {
-  // Private fields
-  bool _isLoading = false;
-  bool _isVerified = false;
-  bool _isDetailsConfirmed = false;
+
+  final IFSCService _ifscService = IFSCService();
+  // State variables for IFSC lookup
+  bool _isFetchingBankInfo = false;
+  BankDetails? _fetchedBankDetails;
+  String? _bankInfoError;
+  
+  // State variables for bank verification (penny drop)
+  bool _isVerifying = false;
   BankVerificationData? _verifiedBankData;
-  String? _errorMessage;
+  String? _verificationError;
+  
+  // User confirmation state
+  bool _isConfirmed = false;
 
-  // Getters
-  bool get isLoading => _isLoading;
-  bool get isVerified => _isVerified;
-  bool get isDetailsConfirmed => _isDetailsConfirmed;
+  // Getters for IFSC lookup state
+  bool get isFetchingBankInfo => _isFetchingBankInfo;
+  BankDetails? get fetchedBankDetails => _fetchedBankDetails;
+  String? get bankInfoError => _bankInfoError;
+  bool get hasBankInfo => _fetchedBankDetails != null;
+  
+  // Getters for verification state
+  bool get isVerifying => _isVerifying;
+  bool get isLoading => _isFetchingBankInfo || _isVerifying;
   BankVerificationData? get verifiedBankData => _verifiedBankData;
-  String? get errorMessage => _errorMessage;
+  String? get verificationError => _verificationError;
+  
+  // Getters for confirmation state
+  bool get isConfirmed => _isConfirmed;
+  bool get canProceedToVerification => hasBankInfo && _isConfirmed;
 
-  // Bank verification method
-  Future<bool> verifyBankAccount({
-    required String accountNumber,
-    required String ifscCode,
-  }) async {
-    _setLoading(true);
-    _clearError();
-
+  /// Fetches bank details using IFSC code
+  Future<bool> fetchBankDetails(String ifscCode) async {
+    _setFetchingBankInfo(true);
+    _clearBankInfoError();
+    
     try {
-      // Use real API service or simulation based on environment
-      BankVerificationResponse response;
-
-      if (kDebugMode) {
-        // Use simulation in debug mode for development
-        response = await _simulateVerificationAPI(
-          BankVerificationRequest(
-            accountNumber: accountNumber,
-            ifscCode: ifscCode,
-          ),
-        );
-      } else {
-        // Use real API service in production
-        response = await BankVerificationService.verifyBankAccount(
-          accountNumber: accountNumber,
-          ifscCode: ifscCode,
-        );
-      }
-
-      if (response.success && response.data != null) {
-        _verifiedBankData = response.data;
-        _isVerified = true;
-        notifyListeners();
-        return true;
-      } else {
-        _setError(
-          BankVerificationService.getUserFriendlyErrorMessage(
-            response.errorCode,
-          ),
-        );
-        return false;
-      }
+      final bankDetails = await _ifscService.fetchBankDetails(ifscCode);
+      _fetchedBankDetails = bankDetails;
+      _setFetchingBankInfo(false);
+      return true;
     } catch (e) {
-      _setError('An unexpected error occurred: ${e.toString()}');
+      _bankInfoError = e.toString();
+      _fetchedBankDetails = null;
+      _setFetchingBankInfo(false);
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
-  // Submit bank details method - Fixed validation logic
-  Future<bool> submitBankDetails() async {
-    // Improved validation with better error messages
-    if (_verifiedBankData == null) {
-      _setError('Bank details not verified. Please verify first.');
-      return false;
-    }
-
-    if (!_isVerified) {
-      _setError('Bank verification is not complete.');
-      return false;
-    }
-
-    if (!_isDetailsConfirmed) {
-      _setError('Please confirm bank details before submitting.');
-      return false;
-    }
-
-    _setLoading(true);
-    _clearError();
-
-    try {
-      bool success;
-
-      if (kDebugMode) {
-        // Use simulation in debug mode
-        success = await _simulateSubmissionAPI(_verifiedBankData!);
-      } else {
-        // Use real API service in production
-        success = await BankVerificationService.submitBankDetails(
-          bankData: _verifiedBankData!,
-        );
-      }
-
-      if (success) {
-        // Don't reset state immediately - let UI handle it
-        debugPrint('Bank details submitted successfully');
-        return true;
-      } else {
-        _setError('Failed to submit bank details. Please try again.');
-        return false;
-      }
-    } catch (e) {
-      _setError('An unexpected error occurred: ${e.toString()}');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+  /// Validates IFSC format before attempting fetch
+  bool validateIFSCFormat(String ifscCode) {
+    return _ifscService.isValidIFSC(ifscCode);
   }
 
-  // Simulated API call for verification (dummy data)
-  Future<BankVerificationResponse> _simulateVerificationAPI(
-    BankVerificationRequest request,
-  ) async {
-    // Simulate network delay
+  /// Sets user confirmation status
+  void setConfirmation(bool isConfirmed) {
+    _isConfirmed = isConfirmed;
+    notifyListeners();
+  }
+
+  /// Clears fetched bank details (when user wants to edit)
+  void clearBankDetails() {
+    _fetchedBankDetails = null;
+    _bankInfoError = null;
+    _isConfirmed = false;
+    notifyListeners();
+  }
+
+  /// Performs bank account verification (penny drop)
+  // Replace the verifyBankAccount method in BankVerificationController
+Future<bool> verifyBankAccount({
+  required String accountNumber,
+  required String ifscCode,
+}) async {
+  if (!canProceedToVerification) {
+    _verificationError = 'Please confirm bank details before proceeding';
+    notifyListeners();
+    return false;
+  }
+
+  _setVerifying(true);
+  _clearVerificationError();
+  
+  try {
+    // This is a placeholder for the actual verification logic. Replace with actual penny drop API call
     await Future.delayed(const Duration(seconds: 2));
 
-    // Simulate different responses based on IFSC code for testing
-    if (request.ifscCode.startsWith('SBIN')) {
-      return BankVerificationResponse(
-        success: true,
-        message: 'Bank details verified successfully',
-        data: BankVerificationData(
-          accountNumber: request.accountNumber,
-          ifscCode: request.ifscCode,
-          accountHolderName: 'John Doe',
-          bankName: 'State Bank of India',
-          branch: 'New Delhi Main Branch',
-          isVerified: true,
-          verificationDate: DateTime.now(),
-        ),
-      );
-    } else if (request.ifscCode.startsWith('HDFC')) {
-      return BankVerificationResponse(
-        success: true,
-        message: 'Bank details verified successfully',
-        data: BankVerificationData(
-          accountNumber: request.accountNumber,
-          ifscCode: request.ifscCode,
-          accountHolderName: 'Jane Smith',
-          bankName: 'HDFC Bank',
-          branch: 'Mumbai Central Branch',
-          isVerified: true,
-          verificationDate: DateTime.now(),
-        ),
-      );
-    } else if (request.ifscCode.startsWith('ICIC')) {
-      return BankVerificationResponse(
-        success: true,
-        message: 'Bank details verified successfully',
-        data: BankVerificationData(
-          accountNumber: request.accountNumber,
-          ifscCode: request.ifscCode,
-          accountHolderName: 'Rajesh Kumar',
-          bankName: 'ICICI Bank',
-          branch: 'Bangalore Electronic City',
-          isVerified: true,
-          verificationDate: DateTime.now(),
-        ),
-      );
-    } else {
-      // Simulate verification failure for other IFSC codes
-      return BankVerificationResponse(
-        success: false,
-        message:
-            'Bank details could not be verified. Please check your account number and IFSC code.',
-        errorCode: 'VERIFICATION_FAILED',
-      );
-    }
-  }
-
-  // Simulated API call for submission (dummy response)
-  Future<bool> _simulateSubmissionAPI(BankVerificationData bankData) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Add some random failure for testing (5% chance)
-    if (DateTime.now().millisecond % 20 == 0) {
-      return false;
-    }
-
-    // Simulate success for demonstration
+    _verifiedBankData = BankVerificationData(
+      accountNumber: accountNumber,
+      ifscCode: ifscCode,
+      accountHolderName: 'Mock Account Holder', // This would come from your penny drop API
+      bankName: _fetchedBankDetails?.bankName ?? 'Unknown Bank',
+      branch: _fetchedBankDetails?.branch ?? 'Unknown Branch',
+      isVerified: true,
+      verificationDate: DateTime.now(),
+    );
+    _setVerifying(false);
     return true;
+  } catch (e) {
+    _verificationError = 'Verification failed: ${e.toString()}';
+    _setVerifying(false);
+    return false;
   }
-
-  // State management methods
-  void updateConfirmationStatus(bool isConfirmed) {
-    _isDetailsConfirmed = isConfirmed;
-    notifyListeners();
-  }
-
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String error) {
-    _errorMessage = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  void _resetState() {
-    _isVerified = false;
-    _isDetailsConfirmed = false;
+}
+  void clearVerificationData() {
     _verifiedBankData = null;
-    _errorMessage = null;
+    _verificationError = null;
     notifyListeners();
   }
 
-  // Reset verification (useful for re-verification)
-  void resetVerification() {
-    _resetState();
+  void resetAll() {
+    _fetchedBankDetails = null;
+    _bankInfoError = null;
+    _verifiedBankData = null;
+    _verificationError = null;
+    _isConfirmed = false;
+    _isFetchingBankInfo = false;
+    _isVerifying = false;
+    notifyListeners();
+  }
+
+  void _setFetchingBankInfo(bool loading) {
+    _isFetchingBankInfo = loading;
+    notifyListeners();
+  }
+
+  void _setVerifying(bool loading) {
+    _isVerifying = loading;
+    notifyListeners();
+  }
+
+  void _clearBankInfoError() {
+    _bankInfoError = null;
+    notifyListeners();
+  }
+
+  void _clearVerificationError() {
+    _verificationError = null;
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    // Clean up any resources if needed
     super.dispose();
   }
+}
 
-  // Utility methods for validation
-  static bool isValidAccountNumber(String accountNumber) {
-    return accountNumber.length >= 8 &&
-        accountNumber.length <= 25 &&
-        RegExp(r'^\d+$').hasMatch(accountNumber);
-  }
-
-  static bool isValidIFSC(String ifsc) {
-    return ifsc.length == 11 && RegExp(r'^[A-Z]{4}0\w{6}$').hasMatch(ifsc);
-  }
-
-  // Improved setter methods with validation
-  void setVerifiedBankData(BankVerificationData? data) {
-    _verifiedBankData = data;
-    if (data != null) {
-      _isVerified = data.isVerified;
-    }
-    notifyListeners();
-  }
-
-  void setVerificationStatus(bool status) {
-    _isVerified = status;
-    notifyListeners();
-  }
-
-  // Additional utility method to check if ready for submission
-  bool get isReadyForSubmission {
-    return _isVerified &&
-        _verifiedBankData != null &&
-        _isDetailsConfirmed &&
-        !_isLoading;
-  }
-
-  // Method to get formatted bank details for display
-  Map<String, String> get formattedBankDetails {
-    if (_verifiedBankData == null) return {};
-
+extension BankDetailsExtension on BankDetails {
+  Map<String, dynamic> toMap() {
     return {
-      'Account Holder': ?_verifiedBankData!.accountHolderName,
-      'Bank Name': ?_verifiedBankData!.bankName,
-      'Branch': ?_verifiedBankData!.branch,
-      'Account Number': _verifiedBankData!.accountNumber,
-      'IFSC Code': _verifiedBankData!.ifscCode,
+      'bankName': bankName,
+      'branch': branch,
+      'address': address,
+      'city': city,
+      'state': state,
+      'contact': contact,
+      'ifscCode': ifscCode,
     };
   }
 }
