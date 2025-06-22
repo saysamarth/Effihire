@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 
 import '../services/bank_controller.dart';
-import 'bank_info_card.dart';
+import '../widgets/bank_info_card.dart';
 import '../widgets/bank_conformation.dart';
 import '../../../common widgets/snackbar_helper.dart';
 import '../../../config/colors/app_colors.dart';
