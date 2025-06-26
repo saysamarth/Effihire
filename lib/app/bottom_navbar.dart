@@ -1,10 +1,14 @@
+// bottom_navbar.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile/screens/profile_screen.dart';
-import 'home/screen/home_screen.dart';
+import '../app/home/screen/home_screen.dart';
+import '../app/profile/screens/profile_screen.dart';
 
 class BottomNavBar extends StatefulWidget {
-  const BottomNavBar({super.key});
+  final Widget child;
+  
+  const BottomNavBar({super.key, required this.child});
   
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
@@ -13,10 +17,8 @@ class BottomNavBar extends StatefulWidget {
 class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 2;
   late final List<Widget> _pages;
-  
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
   late final String? _userPhone;
-
+  
   static const List<IconData> _navigationIcons = [
     Icons.group,
     Icons.assignment,
@@ -25,26 +27,51 @@ class _BottomNavBarState extends State<BottomNavBar> {
     Icons.person,
   ];
 
+  static const List<String> _tabRoutes = [
+    '/main/referral',
+    '/main/tasks', 
+    '/main/home',
+    '/main/payment',
+    '/main/profile',
+  ];
+
   @override
   void initState() {
     super.initState();
-
-    _userPhone = _auth.currentUser?.phoneNumber;
+    _userPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
 
     _pages = [
-      const _ReferralPage(),
-      const _TasksPage(),
+      const ReferralScreen(),
+      const TasksScreen(),
       const HomeScreen(),
-      const _PaymentPage(),
+      const PaymentScreen(),
       ProfileScreen(userPhone: _userPhone),
     ];
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateSelectedIndex();
+  }
+
+  void _updateSelectedIndex() {
+    final String location = GoRouterState.of(context).uri.toString();
+    for (int i = 0; i < _tabRoutes.length; i++) {
+      if (location.startsWith(_tabRoutes[i])) {
+        if (_selectedIndex != i) {
+          setState(() {
+            _selectedIndex = i;
+          });
+        }
+        break;
+      }
+    }
+  }
+
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
-      setState(() {
-        _selectedIndex = index;
-      });
+      context.go(_tabRoutes[index]);
     }
   }
 
@@ -118,29 +145,38 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _ReferralPage extends StatelessWidget {
-  const _ReferralPage();
-  
+class ReferralScreen extends StatelessWidget {
+  const ReferralScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Referral'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Referral')),
+      body: const Center(child: Text('Referral Screen')),
+    );
   }
 }
 
-class _TasksPage extends StatelessWidget {
-  const _TasksPage();
+class TasksScreen extends StatelessWidget {
+  const TasksScreen({super.key});
   
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('My Tasks'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Tasks')),
+      body: const Center(child: Text('Tasks Screen')),
+    );
   }
 }
 
-class _PaymentPage extends StatelessWidget {
-  const _PaymentPage();
-  
+class PaymentScreen extends StatelessWidget {
+  const PaymentScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Payment'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Payment')),
+      body: const Center(child: Text('Payment Screen')),
+    );
   }
 }

@@ -1,7 +1,7 @@
-import 'package:effihire/auth/Fetch Location/Views/location_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 
 class LoginScreen extends StatefulWidget {
@@ -330,10 +330,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         // Navigate to home with replacement to prevent back navigation
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LocationScreen()),
-          );
+          context.go('/location');
         }
       } else {
         _showMessage('Authentication failed. Please try again.');
