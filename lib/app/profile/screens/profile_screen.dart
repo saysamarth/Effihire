@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../auth/login_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String? userPhone;
 
-  ProfileScreen({
-    super.key,
-    required this.userPhone,
-  });
+  ProfileScreen({super.key, required this.userPhone});
   // Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -18,10 +15,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Profile',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -73,11 +67,7 @@ class ProfileScreen extends StatelessWidget {
           const CircleAvatar(
             radius: 30,
             backgroundColor: Color.fromARGB(255, 91, 42, 134),
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: Icon(Icons.person, color: Colors.white, size: 30),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -95,10 +85,7 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Signed in',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -150,10 +137,7 @@ class ProfileScreen extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
@@ -202,11 +186,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           title: Row(
             children: [
-              Icon(
-                Icons.logout,
-                color: Colors.red[800],
-                size: 24,
-              ),
+              Icon(Icons.logout, color: Colors.red[800], size: 24),
               SizedBox(width: 8),
               Text(
                 'Sign Out',
@@ -240,7 +220,6 @@ class ProfileScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
                 _signOut(context);
               },
               style: ElevatedButton.styleFrom(
@@ -268,43 +247,24 @@ class ProfileScreen extends StatelessWidget {
     try {
       await _auth.signOut();
       showSnackBar(context, 'Signed out successfully');
-      Navigator.of(context).pushAndRemoveUntil(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            var begin = Offset(-1.0, 0.0);
-            var end = Offset.zero;
-            var curve = Curves.easeInOutCubic;
-            var tween = Tween(
-              begin: begin,
-              end: end,
-            ).chain(CurveTween(curve: curve));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            );
-          },
-          transitionDuration: Duration(milliseconds: 600),
-        ),
-        (route) => false,
-      );
+
+      // Navigate to the special logout-login route with animation
+      if (context.mounted) {
+        context.go('/logout-login');
+      }
     } catch (e) {
       showSnackBar(context, 'Failed to sign out. Please try again.');
       print('Error signing out: $e');
     }
   }
+
   void showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Color.fromARGB(255, 91, 42, 134),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: Duration(seconds: 2),
       ),
     );

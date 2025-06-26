@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'auth/splash_screen.dart';
+import 'config/routes/routes.dart';
 import 'auth/Fetch Location/Location Cubit/location_cubit.dart';
 import 'auth/Fetch Location/Location Cubit/location_service.dart';
 
@@ -22,13 +22,13 @@ class MyApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (context) => LocationCubit(LocationService())),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: 'EffiHire',
         theme: ThemeData(
           primarySwatch: Colors.deepPurple,
           fontFamily: 'Roboto',
         ),
-        home: SplashScreen(),
+        routerConfig: AppRouter.router,
         debugShowCheckedModeBanner: false,
       ),
     );

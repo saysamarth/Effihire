@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../Location Cubit/location_cubit.dart';
 import '../Location Cubit/location_state.dart';
-import '../../../app/bottom_navbar.dart';
+import 'package:go_router/go_router.dart';
 
 class LocationScreen extends StatefulWidget {
   const LocationScreen({super.key});
@@ -71,11 +71,7 @@ class _LocationScreenState extends State<LocationScreen>
   void _handleAutoNavigation() {
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const BottomNavBar(),
-          ),
-        );
+        context.go('/main/home');
       }
     });
   }

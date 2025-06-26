@@ -47,6 +47,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   razorpay_ifsc: ^1.1.1
   http: ^1.1.0
+  go_router: ^15.2.4
 
 dev_dependencies:
   flutter_test:
