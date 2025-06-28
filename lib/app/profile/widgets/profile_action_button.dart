@@ -34,13 +34,9 @@ class _ProfileActionButtonState extends State<ProfileActionButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -57,15 +53,11 @@ class _ProfileActionButtonState extends State<ProfileActionButton>
       onTapCancel: () => _animationController.reverse(),
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
+        child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: widget.onPressed,
-            icon: Icon(
-              widget.icon,
-              color: widget.textColor,
-              size: 20,
-            ),
+            icon: Icon(widget.icon, color: widget.textColor, size: 20),
             label: Text(
               widget.title,
               style: TextStyle(

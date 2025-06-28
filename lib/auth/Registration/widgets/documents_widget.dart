@@ -68,7 +68,7 @@ class DocumentsStepWidget extends StatelessWidget {
                     ),
                   ),
                 )
-                .toList(),
+                ,
           ],
         ),
       ),

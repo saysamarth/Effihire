@@ -15,7 +15,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isDarkMode = false;
   bool _isOnline = false;
@@ -30,13 +31,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _animationController.forward();
   }
 
@@ -48,7 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-   return Scaffold(
+    return Scaffold(
       backgroundColor: Colors.grey.shade50,
       extendBodyBehindAppBar: false,
       appBar: _buildAppBar(),
@@ -63,15 +60,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               // User Info Header Card
               ProfileHeaderCard(
                 userPhone: widget.userPhone ?? 'User',
-                userName: 'John Doe', // This would come from backend
+                userName: 'Samarth Sharma', // This would come from backend
                 gigId: 'GIG001234',
                 rating: 4.8,
                 profileImageUrl: null, // This would come from backend
                 onEditProfile: _onEditProfile,
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Account Settings Section
               SettingsSection(
                 title: 'Account & Preferences',
@@ -116,9 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Earnings & Business Section
               SettingsSection(
                 title: 'Earnings & Business',
@@ -140,9 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Support & Safety Section
               SettingsSection(
                 title: 'Support & Safety',
@@ -172,9 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Legal Section
               SettingsSection(
                 title: 'Legal',
@@ -188,9 +185,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Action Buttons
               Column(
                 children: [
@@ -212,7 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 32),
             ],
           ),
@@ -221,103 +218,101 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-PreferredSizeWidget _buildAppBar() {
-  return AppBar(
-    title: Text(
-      'My Profile',
-      style: GoogleFonts.inter(
-        fontWeight: FontWeight.w600,
-        fontSize: 22,
-        color: const Color(0xFF1A1A1A),
-        letterSpacing: -0.5,
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        'My Profile',
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          color: const Color(0xFF1A1A1A),
+          letterSpacing: -0.5,
+        ),
       ),
-    ),
-    backgroundColor: Colors.white,
-    surfaceTintColor: Colors.transparent,
-    elevation: 0,
-    scrolledUnderElevation: 0,
-    automaticallyImplyLeading: false,
-    centerTitle: false,
-    titleSpacing: 24,
-    toolbarHeight: 64,
-    actions: [
-      Container(
-        margin: const EdgeInsets.only(right: 20),
-        child: Stack(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
-                  width: 0.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    offset: const Offset(0, 1),
-                    blurRadius: 3,
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => showSnackBar(context, 'Notifications'),
-                  child: const Icon(
-                    Icons.notifications_none_rounded,
-                    color: Color(0xFF6B7280),
-                    size: 22,
-                  ),
-                ),
-              ),
-            ),
-            // Notification badge
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                width: 8,
-                height: 8,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
+      centerTitle: false,
+      titleSpacing: 24,
+      toolbarHeight: 64,
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 20),
+          child: Stack(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444),
-                  shape: BoxShape.circle,
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFE5E7EB),
+                    width: 0.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white,
-                      spreadRadius: 1.5,
+                      color: Colors.black.withOpacity(0.04),
+                      offset: const Offset(0, 1),
+                      blurRadius: 3,
                     ),
                   ],
                 ),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => showSnackBar(context, 'Notifications'),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Color(0xFF6B7280),
+                      size: 22,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    ],
-    bottom: PreferredSize(
-      preferredSize: const Size.fromHeight(1),
-      child: Container(
-        height: 1,
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              const Color(0xFFE5E7EB).withAlpha(200),
-              Colors.transparent,
+              // Notification badge
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.white, spreadRadius: 1.5),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                const Color(0xFFE5E7EB).withAlpha(200),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   // Event Handlers
   void _onEditProfile() {
     showSnackBar(context, 'Edit profile feature coming soon');
@@ -345,6 +340,7 @@ PreferredSizeWidget _buildAppBar() {
       showSnackBar(context, 'Light mode enabled');
     }
   }
+
   void _onOnlineToggle(bool value) {
     setState(() {
       _isOnline = value;

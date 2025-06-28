@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../common widgets/snackbar_helper.dart';
+import '../../../config/colors/app_colors.dart';
 // Import your existing files
 import '../models/bank_model.dart';
 import '../services/bank_controller.dart';
-import '../../../common widgets/snackbar_helper.dart';
-import '../../../config/colors/app_colors.dart';
 
 class BankReviewScreen extends StatefulWidget {
   final String accountNumber;
@@ -268,7 +268,7 @@ class _BankReviewScreenState extends State<BankReviewScreen>
     final details = [
       (
         'Account Holder Name',
-        widget.bankData?.accountHolderName ?? 'John Doe',
+        widget.bankData?.accountHolderName ?? 'Samarth Sharma',
         Icons.person_outline,
       ),
       (
