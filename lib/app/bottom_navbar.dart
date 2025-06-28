@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app/home/screen/home_screen.dart';
 import '../app/profile/screens/profile_screen.dart';
+import '../app/payment/payment.dart';
 
 class BottomNavBar extends StatefulWidget {
   final Widget child;
@@ -44,7 +45,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
       const ReferralScreen(),
       const TasksScreen(),
       const HomeScreen(),
-      const PaymentScreen(),
+      PaymentTab(),
       ProfileScreen(userPhone: _userPhone),
     ];
   }
