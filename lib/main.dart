@@ -5,6 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'config/routes/routes.dart';
 import 'auth/Fetch Location/Location Cubit/location_cubit.dart';
 import 'auth/Fetch Location/Location Cubit/location_service.dart';
+import './app/payment/views/payment.dart';
+import './app/payment/cubit/payment_cubit.dart';
+import './app/payment/services/payment_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +24,10 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => LocationCubit(LocationService())),
+        BlocProvider(
+          create: (context) => PaymentCubit(PaymentService()),
+          child: PaymentTab(),
+        ),
       ],
       child: MaterialApp.router(
         title: 'EffiHire',

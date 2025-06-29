@@ -1,18 +1,14 @@
+// widgets/payment_filter_widget.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../cubit/payment_cubit.dart';
+import '../cubit/payment_state.dart';
 import '../models/payment_models.dart';
 
 class PaymentFiltersWidget extends StatefulWidget {
-  final PaymentFilters filters;
-  final Function(PaymentFilters) onFiltersChanged;
-  final List<String> companies;
-
-  const PaymentFiltersWidget({
-    Key? key,
-    required this.filters,
-    required this.onFiltersChanged,
-    required this.companies,
-  }) : super(key: key);
+  const PaymentFiltersWidget({super.key});
 
   @override
   State<PaymentFiltersWidget> createState() => _PaymentFiltersWidgetState();
@@ -21,88 +17,72 @@ class PaymentFiltersWidget extends StatefulWidget {
 class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<PaymentCubit, PaymentState>(
+      builder: (context, state) {
+        if (state is! PaymentLoaded) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Recent Transactions',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1A1A1A),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 91, 42, 134),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => _showApplyFiltersMessage(context),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Text(
-                      'Apply Filters',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recent Transactions',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A1A1A),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 50,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      label: 'Date Range',
+                      value: state.filters.dateRange,
+                      isSelected: true,
+                      onTap: () => _showDateRangeOptions(state.filters),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Company',
+                      value: state.filters.company,
+                      isSelected: state.filters.company != 'All Companies',
+                      onTap: () =>
+                          _showCompanyOptions(state.filters, state.companies),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Status',
+                      value: state.filters.status,
+                      isSelected: state.filters.status != 'All Status',
+                      onTap: () => _showStatusOptions(state.filters),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      label: 'Sort By',
+                      value: state.filters.sort,
+                      isSelected: true,
+                      onTap: () => _showSortOptions(state.filters),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-
-        Container(
-          height: 50,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                _buildFilterChip(
-                  label: 'Date Range',
-                  value: widget.filters.dateRange,
-                  isSelected: true,
-                  onTap: () => _showDateRangeOptions(),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterChip(
-                  label: 'Company',
-                  value: widget.filters.company,
-                  isSelected: widget.filters.company != 'All Companies',
-                  onTap: () => _showCompanyOptions(),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterChip(
-                  label: 'Status',
-                  value: widget.filters.status,
-                  isSelected: widget.filters.status != 'All Status',
-                  onTap: () => _showStatusOptions(),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterChip(
-                  label: 'Sort By',
-                  value: widget.filters.sort,
-                  isSelected: true,
-                  onTap: () => _showSortOptions(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -176,61 +156,68 @@ class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
     );
   }
 
-  void _showDateRangeOptions() {
+  void _showDateRangeOptions(PaymentFilters currentFilters) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Date Range',
         options: ['Today', 'Last Week', 'Last Month', 'Custom'],
-        selectedValue: widget.filters.dateRange,
+        selectedValue: currentFilters.dateRange,
         onSelected: (value) {
-            widget.onFiltersChanged(widget.filters.copyWith(dateRange: value));
+          final newFilters = currentFilters.copyWith(dateRange: value);
+          context.read<PaymentCubit>().applyFilters(newFilters);
         },
       ),
     );
   }
 
-  void _showCompanyOptions() {
+  void _showCompanyOptions(
+    PaymentFilters currentFilters,
+    List<String> companies,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Company',
-        options: widget.companies,
-        selectedValue: widget.filters.company,
+        options: companies,
+        selectedValue: currentFilters.company,
         onSelected: (value) {
-          widget.onFiltersChanged(widget.filters.copyWith(company: value));
+          final newFilters = currentFilters.copyWith(company: value);
+          context.read<PaymentCubit>().applyFilters(newFilters);
         },
       ),
     );
   }
 
-  void _showStatusOptions() {
+  void _showStatusOptions(PaymentFilters currentFilters) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Status',
         options: ['All Status', 'Paid', 'Processing', 'Pending'],
-        selectedValue: widget.filters.status,
+        selectedValue: currentFilters.status,
         onSelected: (value) {
-          widget.onFiltersChanged(widget.filters.copyWith(status: value));
+          final newFilters = currentFilters.copyWith(status: value);
+          context.read<PaymentCubit>().applyFilters(newFilters);
         },
       ),
     );
   }
 
-  void _showSortOptions() {
+  void _showSortOptions(PaymentFilters currentFilters) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildFilterBottomSheet(
         title: 'Sort By',
         options: ['Newest', 'Oldest', 'Highest Paid', 'Lowest Paid'],
-        selectedValue: widget.filters.sort,
+        selectedValue: currentFilters.sort,
         onSelected: (value) {
-          widget.onFiltersChanged(widget.filters.copyWith(sort: value));
+          final newFilters = currentFilters.copyWith(sort: value);
+          context.read<PaymentCubit>().applyFilters(newFilters);
         },
       ),
     );
@@ -276,18 +263,13 @@ class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ...options
-                    .map(
-                      (option) => _buildFilterOption(
-                        option,
-                        selectedValue == option,
-                        () {
-                          onSelected(option);
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    )
-                    .toList(),
+                ...options.map(
+                  (option) =>
+                      _buildFilterOption(option, selectedValue == option, () {
+                        onSelected(option);
+                        Navigator.of(context).pop();
+                      }),
+                ),
                 const SizedBox(height: 10),
               ],
             ),
@@ -335,22 +317,6 @@ class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showApplyFiltersMessage(BuildContext context) {
-    _showSnackBar(context, 'Filters applied successfully');
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color.fromARGB(255, 91, 42, 134),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
       ),
     );
   }

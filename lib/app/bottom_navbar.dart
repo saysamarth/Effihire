@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app/home/screen/home_screen.dart';
 import '../app/profile/screens/profile_screen.dart';
-import '../app/payment/payment.dart';
+import 'payment/views/payment.dart';
 
 class BottomNavBar extends StatefulWidget {
   final Widget child;
-  
+
   const BottomNavBar({super.key, required this.child});
-  
+
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
 }
@@ -19,7 +19,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 2;
   late final List<Widget> _pages;
   late final String? _userPhone;
-  
+
   static const List<IconData> _navigationIcons = [
     Icons.group,
     Icons.assignment,
@@ -30,7 +30,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   static const List<String> _tabRoutes = [
     '/main/referral',
-    '/main/tasks', 
+    '/main/tasks',
     '/main/home',
     '/main/payment',
     '/main/profile',
@@ -80,10 +80,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: Container(
         height: 60,
         margin: const EdgeInsets.only(left: 12, right: 12, bottom: 24),
@@ -125,7 +122,7 @@ class _NavItem extends StatelessWidget {
   final int index;
   final bool isSelected;
   final Function(int) onTap;
-  
+
   const _NavItem({
     required this.icon,
     required this.index,
@@ -160,7 +157,7 @@ class ReferralScreen extends StatelessWidget {
 
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
