@@ -1,5 +1,5 @@
-//import 'package:effihire/auth/Registration/views/registration_screen.dart';
-import 'package:effihire/auth/Bank%20Registration/screens/bank_detail_input_screen.dart';
+import 'package:effihire/auth/Registration/views/registration_screen.dart';
+//import 'package:effihire/auth/Bank%20Registration/screens/bank_detail_input_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/opportunity.dart';
@@ -34,7 +34,7 @@ class WelcomeSection extends StatelessWidget {
 
 class _WelcomeContent extends StatelessWidget {
   final double screenWidth;
-  
+
   const _WelcomeContent({required this.screenWidth});
 
   @override
@@ -91,7 +91,7 @@ class _WelcomeContent extends StatelessWidget {
 
 class _RegisterButton extends StatelessWidget {
   final double screenWidth;
-  
+
   const _RegisterButton({required this.screenWidth});
 
   @override
@@ -100,7 +100,8 @@ class _RegisterButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => const BankDetailsScreen()//RegistrationScreen(),
+            builder: (context) =>
+                const RegistrationScreen(), //BankDetailsScreen(),
           ),
         );
       },
@@ -111,9 +112,7 @@ class _RegisterButton extends StatelessWidget {
           horizontal: screenWidth * 0.05,
           vertical: screenWidth * 0.025,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 3,
       ),
       child: Text(
@@ -129,7 +128,7 @@ class _RegisterButton extends StatelessWidget {
 
 class _LogoCircle extends StatelessWidget {
   final double screenWidth;
-  
+
   const _LogoCircle({required this.screenWidth});
 
   @override
@@ -193,7 +192,7 @@ class LocationSection extends StatelessWidget {
 
 class _LocationContent extends StatelessWidget {
   final double screenWidth;
-  
+
   const _LocationContent({required this.screenWidth});
 
   void _handleLocationTap(BuildContext context) {
@@ -204,7 +203,7 @@ class _LocationContent extends StatelessWidget {
         duration: Duration(seconds: 1),
       ),
     );
-    
+
     // Refresh location using cubit
     context.read<LocationCubit>().updateLocation();
   }
@@ -323,7 +322,7 @@ class _LocationContent extends StatelessWidget {
 class OpportunityButton extends StatelessWidget {
   final String name;
   final Color color;
-  final String logoPath; 
+  final String logoPath;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -340,7 +339,8 @@ class OpportunityButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final logoSize = screenWidth * 0.04;
-    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio).toInt();
+    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio)
+        .toInt();
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -423,7 +423,8 @@ class EarningCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final logoSize = screenWidth * 0.08;
-    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio).toInt();
+    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio)
+        .toInt();
 
     return Material(
       color: Colors.transparent,

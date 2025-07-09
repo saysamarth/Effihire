@@ -1,8 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/registration_model.dart';
-import 'dart:io';
+
 import '../models/ocr_model.dart';
+import '../models/registration_model.dart';
 import 'common.dart';
 
 class DocumentsStepWidget extends StatelessWidget {
@@ -11,6 +13,8 @@ class DocumentsStepWidget extends StatelessWidget {
   final RegistrationData registrationData;
   final Function(String) onVehicleSelected;
   final Function(String) onDocumentScan;
+  final Map<String, bool> documentLoadingStates;
+  final Map<String, DocumentResponse> documentResponses;
 
   const DocumentsStepWidget({
     super.key,
@@ -19,6 +23,8 @@ class DocumentsStepWidget extends StatelessWidget {
     required this.registrationData,
     required this.onVehicleSelected,
     required this.onDocumentScan,
+    required this.documentLoadingStates,
+    required this.documentResponses,
   });
 
   @override
@@ -55,20 +61,18 @@ class DocumentsStepWidget extends StatelessWidget {
             _buildDocumentInfoCard(),
             const SizedBox(height: 16),
 
-            ...DocumentType.requiredDocuments
-                .map(
-                  (documentType) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: DocumentUploadCard(
-                      documentType: documentType,
-                      uploadedFile: registrationData.getDocument(
-                        documentType.id,
-                      ),
-                      onTap: () => onDocumentScan(documentType.id),
-                    ),
-                  ),
-                )
-                ,
+            ...DocumentType.requiredDocuments.map(
+              (documentType) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: DocumentUploadCard(
+                  documentType: documentType,
+                  uploadedFile: registrationData.getDocument(documentType.id),
+                  isLoading: documentLoadingStates[documentType.id] ?? false,
+                  documentResponse: documentResponses[documentType.id],
+                  onTap: () => onDocumentScan(documentType.id),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -85,11 +89,7 @@ class DocumentsStepWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.blue.shade600,
-            size: 20,
-          ),
+          Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -106,11 +106,10 @@ class DocumentsStepWidget extends StatelessWidget {
   }
 }
 
-
 class VehicleSelectionGrid extends StatelessWidget {
   final String? selectedVehicle;
   final Function(String) onVehicleSelected;
-  
+
   const VehicleSelectionGrid({
     super.key,
     required this.selectedVehicle,
@@ -144,7 +143,7 @@ class VehicleSelectionGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             final vehicle = VehicleOption.options[index];
             final isSelected = selectedVehicle == vehicle.name;
-            
+
             return GestureDetector(
               onTap: () => onVehicleSelected(vehicle.name),
               child: Container(
@@ -152,7 +151,9 @@ class VehicleSelectionGrid extends StatelessWidget {
                   color: isSelected ? AppConstants.primaryColor : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                    color: isSelected
+                        ? AppConstants.primaryColor
+                        : Colors.grey.shade300,
                     width: 1.5,
                   ),
                 ),
@@ -161,7 +162,9 @@ class VehicleSelectionGrid extends StatelessWidget {
                   children: [
                     Icon(
                       vehicle.icon,
-                      color: isSelected ? Colors.white : AppConstants.primaryColor,
+                      color: isSelected
+                          ? Colors.white
+                          : AppConstants.primaryColor,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -190,12 +193,16 @@ class VehicleSelectionGrid extends StatelessWidget {
 class DocumentUploadCard extends StatefulWidget {
   final DocumentType documentType;
   final File? uploadedFile;
+  final bool isLoading;
+  final DocumentResponse? documentResponse;
   final VoidCallback onTap;
 
   const DocumentUploadCard({
     super.key,
     required this.documentType,
     required this.uploadedFile,
+    this.isLoading = false,
+    this.documentResponse,
     required this.onTap,
   });
 
@@ -204,54 +211,40 @@ class DocumentUploadCard extends StatefulWidget {
 }
 
 class _DocumentUploadCardState extends State<DocumentUploadCard> {
-  late DocumentResponse sampleData;
-
-  @override
-  void initState() {
-    super.initState();
-    sampleData = DocumentResponse.getSampleData();
-  }
-
   Map<String, String>? _getRelevantData() {
+    if (widget.documentResponse == null) return null;
     switch (widget.documentType.id) {
       case 'aadhar_front':
-        if (sampleData.aadhaar?.isValid == true) {
+        if (widget.documentResponse?.aadhaar != null &&
+            widget.documentResponse?.aadhaar?.isValid == true) {
           return {
-            'name': sampleData.aadhaar!.name ?? '',
-            'dob': sampleData.aadhaar!.dateOfBirth ?? '',
-            'number': sampleData.aadhaar!.aadhaarNumber ?? '',
-            'gender': sampleData.aadhaar!.gender ?? '',
+            'name': widget.documentResponse!.aadhaar!.name ?? '',
+            'dob': widget.documentResponse!.aadhaar!.dateOfBirth ?? '',
+            'number': widget.documentResponse!.aadhaar!.aadhaarNumber ?? '',
+            'gender': widget.documentResponse!.aadhaar!.gender ?? '',
           };
         }
         break;
       case 'aadhar_back':
-        if (sampleData.aadhaar?.isValid == true) {
+        if (widget.documentResponse?.aadhaar != null &&
+            widget.documentResponse?.aadhaar?.isValid == true) {
           return {
-            'address': sampleData.aadhaar!.address?.fullAddress ?? '',
+            'address':
+                widget.documentResponse!.aadhaar!.address?.fullAddress ?? '',
           };
         }
         break;
       case 'pan_card':
-        if (sampleData.pan?.isValid == true) {
+        if (widget.documentResponse?.pan != null) {
           return {
-            'name': sampleData.pan!.name ?? '',
-            'dob': sampleData.pan!.dateOfBirth ?? '',
-            'number': sampleData.pan!.panNumber ?? '',
+            'name': widget.documentResponse!.pan!.name ?? '',
+            'dob': widget.documentResponse!.pan!.dateOfBirth ?? '',
+            'number': widget.documentResponse!.pan!.panNumber ?? '',
           };
         }
         break;
       case 'driving_license':
-        if (sampleData.drivingLicense?.isValid == true) {
-          return {
-            'name': sampleData.drivingLicense!.name ?? '',
-            'dob': sampleData.drivingLicense!.dateOfBirth ?? '',
-            'number': sampleData.drivingLicense!.licenseNumber ?? '',
-            'address': sampleData.drivingLicense!.address?.fullAddress ?? '',
-            'bloodGroup': sampleData.drivingLicense!.bloodGroup ?? '',
-            'validUpto': sampleData.drivingLicense!.validUpto ?? '',
-          };
-        }
-        break;
+        return {'verification': 'Driving License is valid'};
       case 'selfie':
         // For selfie, don't return any data to avoid showing extracted information section
         return null;
@@ -265,17 +258,13 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
     required IconData icon,
   }) {
     if (value.isEmpty) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: AppConstants.primaryColor,
-            size: 16,
-          ),
+          Icon(icon, color: AppConstants.primaryColor, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -370,34 +359,9 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
         return Column(
           children: [
             _buildInfoRow(
-              label: 'Full Name',
-              value: data['name'] ?? '',
-              icon: Icons.person,
-            ),
-            _buildInfoRow(
-              label: 'Date of Birth',
-              value: data['dob'] ?? '',
-              icon: Icons.calendar_today,
-            ),
-            _buildInfoRow(
-              label: 'License Number',
-              value: data['number'] ?? '',
-              icon: Icons.credit_card,
-            ),
-            _buildInfoRow(
-              label: 'Blood Group',
-              value: data['bloodGroup'] ?? '',
-              icon: Icons.bloodtype,
-            ),
-            _buildInfoRow(
-              label: 'Valid Until',
-              value: data['validUpto'] ?? '',
-              icon: Icons.event_available,
-            ),
-            _buildInfoRow(
-              label: 'Address',
-              value: data['address'] ?? '',
-              icon: Icons.location_on,
+              label: 'Verification',
+              value: data['verification'] ?? 'Driving License is valid',
+              icon: Icons.verified,
             ),
           ],
         );
@@ -411,11 +375,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.check_circle,
-                size: 16,
-                color: Colors.green.shade600,
-              ),
+              Icon(Icons.check_circle, size: 16, color: Colors.green.shade600),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -451,7 +411,11 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isUploaded
-                  ? (isSelfie ? Colors.green.shade400 : (isValidData ? Colors.green.shade400 : Colors.red.shade400))
+                  ? (isSelfie
+                        ? Colors.green.shade400
+                        : (isValidData
+                              ? Colors.green.shade400
+                              : Colors.red.shade400))
                   : Colors.grey.shade300,
               width: 1.5,
             ),
@@ -469,7 +433,9 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
               // Header Section
               InkWell(
                 onTap: widget.onTap,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(10),
+                ),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -479,23 +445,42 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                         height: 40,
                         decoration: BoxDecoration(
                           color: isUploaded
-                              ? (isSelfie ? Colors.green.shade100 : (isValidData ? Colors.green.shade100 : Colors.red.shade100))
+                              ? (isSelfie
+                                    ? Colors.green.shade100
+                                    : (isValidData
+                                          ? Colors.green.shade100
+                                          : Colors.red.shade100))
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(
-                          isUploaded
-                              ? (isSelfie 
-                                  ? Icons.done_all_outlined 
-                                  : (isValidData ? widget.documentType.icon : Icons.error))
-                              : widget.documentType.icon,
-                          color: isUploaded
-                              ? (isSelfie 
-                                  ? Colors.green.shade600 
-                                  : (isValidData ? Colors.green.shade600 : Colors.red.shade600))
-                              : Colors.grey.shade500,
-                          size: 20,
-                        ),
+                        child: widget.isLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.grey.shade600,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                isUploaded
+                                    ? (isSelfie
+                                          ? Icons.done_all_outlined
+                                          : (isValidData
+                                                ? widget.documentType.icon
+                                                : Icons.error))
+                                    : widget.documentType.icon,
+                                color: isUploaded
+                                    ? (isSelfie
+                                          ? Colors.green.shade600
+                                          : (isValidData
+                                                ? Colors.green.shade600
+                                                : Colors.red.shade600))
+                                    : Colors.grey.shade500,
+                                size: 20,
+                              ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -505,18 +490,20 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                             Text(
                               isUploaded
                                   ? (isSelfie
-                                      ? 'Selfie Uploaded'
-                                      : (isValidData
-                                          ? '${widget.documentType.title} Verified'
-                                          : 'Document Invalid'))
+                                        ? 'Selfie Uploaded'
+                                        : (isValidData
+                                              ? '${widget.documentType.title} Verified'
+                                              : 'Document Invalid'))
                                   : 'Upload ${widget.documentType.title}',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: isUploaded
-                                    ? (isSelfie 
-                                        ? Colors.green.shade800 
-                                        : (isValidData ? Colors.green.shade800 : Colors.red.shade800))
+                                    ? (isSelfie
+                                          ? Colors.green.shade800
+                                          : (isValidData
+                                                ? Colors.green.shade800
+                                                : Colors.red.shade800))
                                     : Colors.black87,
                               ),
                             ),
@@ -524,10 +511,10 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                             Text(
                               isUploaded
                                   ? (isSelfie
-                                      ? 'Selfie captured successfully'
-                                      : (isValidData
-                                          ? 'Information extracted successfully'
-                                          : 'Please upload a valid document'))
+                                        ? 'Selfie captured successfully'
+                                        : (isValidData
+                                              ? 'Information extracted successfully'
+                                              : 'Please upload a valid document'))
                                   : 'Tap to upload your document',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,

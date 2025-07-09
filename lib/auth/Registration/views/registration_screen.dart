@@ -12,6 +12,8 @@ import '../services/registration_controller.dart';
 import '../../../common widgets/snackbar_helper.dart';
 import '../widgets/common.dart';
 import '../widgets/personal_info_widget.dart';
+import 'package:effihire/auth/Registration/services/ocr_service.dart';
+import 'package:effihire/auth/Registration/models/ocr_model.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -40,8 +42,13 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   final _languagesController = TextEditingController();
 
   // Services
-  final DocumentScannerService _documentScannerService = DocumentScannerService();
+  final DocumentScannerService _documentScannerService =
+      DocumentScannerService();
   final PhotoCaptureService _photoCaptureService = PhotoCaptureService();
+  final OCRService _ocrService = OCRService();
+
+  Map<String, bool> _documentLoadingStates = {};
+  Map<String, DocumentResponse> _documentResponses = {};
 
   @override
   void initState() {
@@ -76,25 +83,25 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     _pageController.dispose();
     _animationController.dispose();
     _registrationController.dispose();
-    
+
     // Dispose text controllers
     _nameController.dispose();
     _currentAddressController.dispose();
     _permanentAddressController.dispose();
     _qualificationController.dispose();
     _languagesController.dispose();
-    
+
     // Dispose services
     _documentScannerService.dispose();
     _photoCaptureService.dispose();
-    
+
     super.dispose();
   }
 
   // Navigation methods
   void _nextStep() {
     final currentStep = _registrationController.currentStep;
-    
+
     if (currentStep == 0) {
       if (_registrationController.validatePersonalInfo(
         formKey: _personalFormKey,
@@ -105,17 +112,19 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         _navigateToNextPage();
       } else {
         SnackbarHelper.showErrorSnackBar(
-          context, 
+          context,
           _registrationController.getValidationErrorMessage(0),
         );
       }
     } else if (currentStep == 1) {
-      if (_registrationController.validateDocuments(formKey: _documentsFormKey)) {
+      if (_registrationController.validateDocuments(
+        formKey: _documentsFormKey,
+      )) {
         _registrationController.nextStep();
         _navigateToNextPage();
       } else {
         SnackbarHelper.showErrorSnackBar(
-          context, 
+          context,
           _registrationController.getValidationErrorMessage(1),
         );
       }
@@ -176,20 +185,54 @@ class _RegistrationScreenState extends State<RegistrationScreen>
           );
           return;
         }
-
-        _registrationController.updateDocument(documentType, scannedImage);
-        
-        String successMessage = documentType == 'selfie'
-            ? 'Selfie captured successfully!'
-            : 'Document scanned successfully!';
-        
-        SnackbarHelper.showSuccessSnackBar(context, successMessage);
+        await _handleDocumentScan(documentType, scannedImage);
       }
     } catch (e) {
       SnackbarHelper.showErrorSnackBar(
         context,
         'Error scanning document: ${e.toString()}',
       );
+    }
+  }
+
+  Future<void> _handleDocumentScan(String documentType, File imageFile) async {
+    if (!await imageFile.exists()) {
+      return;
+    }
+    setState(() {
+      _documentLoadingStates[documentType] = true;
+    });
+    try {
+      final response = await _ocrService.processDocument(
+        documentType,
+        imageFile,
+      );
+
+      setState(() {
+        if (response.isSuccess) {
+          _documentResponses[documentType] = response.documentResponse!;
+          _registrationController.updateDocument(documentType, imageFile);
+
+          // Show success message
+          String successMessage = documentType == 'selfie'
+              ? 'Selfie captured successfully!'
+              : 'Document verified successfully!';
+          SnackbarHelper.showSuccessSnackBar(context, successMessage);
+        } else {
+          // Show error message based on result type
+          SnackbarHelper.showErrorSnackBar(context, response.errorMessage!);
+        }
+      });
+    } catch (e) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Processing failed, please try again',
+      );
+      print('OCR processing failed: $e');
+    } finally {
+      setState(() {
+        _documentLoadingStates[documentType] = false;
+      });
     }
   }
 
@@ -203,7 +246,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     }
 
     final success = await _registrationController.submitRegistration();
-    
+
     if (success) {
       _showSuccessDialog();
     } else {
@@ -233,8 +276,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
 
   void _onSameAddressChanged(bool value) {
     _registrationController.updateSameAsCurrentAddress(
-      value, 
-      _currentAddressController.text
+      value,
+      _currentAddressController.text,
     );
     if (value) {
       _permanentAddressController.text = _currentAddressController.text;
@@ -335,7 +378,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       qualificationController: _qualificationController,
       languagesController: _languagesController,
       selectedGender: _registrationController.registrationData.gender,
-      sameAsCurrentAddress: _registrationController.registrationData.sameAsCurrentAddress,
+      sameAsCurrentAddress:
+          _registrationController.registrationData.sameAsCurrentAddress,
       onGenderSelected: _onGenderSelected,
       onSameAddressChanged: _onSameAddressChanged,
     );
@@ -348,6 +392,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       registrationData: _registrationController.registrationData,
       onVehicleSelected: _onVehicleSelected,
       onDocumentScan: _scanDocument,
+      documentLoadingStates: _documentLoadingStates,
+      documentResponses: _documentResponses,
     );
   }
 
@@ -385,10 +431,10 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                   onPressed: _registrationController.currentStep == 0
                       ? _nextStep
                       : _registrationController.currentStep == 1
-                          ? _nextStep
-                          : _registrationController.isDetailsConfirmed 
-                              ? _submitRegistration 
-                              : null,
+                      ? _nextStep
+                      : _registrationController.isDetailsConfirmed
+                      ? _submitRegistration
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.primaryColor,
                     shape: RoundedRectangleBorder(
@@ -401,8 +447,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                     _registrationController.currentStep == 0
                         ? 'Next Step'
                         : _registrationController.currentStep == 1
-                            ? 'Review Details'
-                            : 'Submit Registration',
+                        ? 'Review Details'
+                        : 'Submit Registration',
                     style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
