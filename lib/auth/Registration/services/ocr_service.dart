@@ -4,8 +4,9 @@ import 'package:http/http.dart' as http;
 import '../models/ocr_model.dart';
 
 class OCRService {
-  static const String _baseUrl = "https://sb8h7z34-8000.inc1.devtunnels.ms";
-  static const String _debugServerUrl = "http://192.168.0.102:5003";
+  static const String _baseUrl =
+      "https://ekyc-backend-969158963934.us-central1.run.app";
+  //static const String _debugServerUrl = "http://192.168.0.102:5003";
   static const Duration _timeoutDuration = Duration(seconds: 30);
 
   // Convert image file to base64 and send to debug server
@@ -13,7 +14,7 @@ class OCRService {
     try {
       final bytes = await imageFile.readAsBytes();
       final base64String = base64Encode(bytes);
-      await _sendToDebugServer(base64String);
+      //await _sendToDebugServer(base64String);
       return base64String;
     } catch (e) {
       throw Exception('Failed to convert image to base64: $e');
@@ -21,27 +22,27 @@ class OCRService {
   }
 
   // Send base64 string to debug server on PC
-  Future<void> _sendToDebugServer(String base64String) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$_debugServerUrl/decode-image'),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({'base64_string': base64String}),
-          )
-          .timeout(Duration(seconds: 10));
+  // Future<void> _sendToDebugServer(String base64String) async {
+  //   try {
+  //     final response = await http
+  //         .post(
+  //           Uri.parse('$_debugServerUrl/decode-image'),
+  //           headers: {'Content-Type': 'application/json'},
+  //           body: json.encode({'base64_string': base64String}),
+  //         )
+  //         .timeout(Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final result = json.decode(response.body);
-        print(
-          'Image sent to debug server successfully, saved as: \\${result['filename']}',
-        );
-      }
-    } catch (e) {
-      // Silent fail
-      print('Failed to send image to debug server: $e');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final result = json.decode(response.body);
+  //       print(
+  //         'Image sent to debug server successfully, saved as: \\${result['filename']}',
+  //       );
+  //     }
+  //   } catch (e) {
+  //     // Silent fail
+  //     print('Failed to send image to debug server: $e');
+  //   }
+  // }
 
   // Generic method to make API calls with proper error handling
   Future<Map<String, dynamic>> _makeAPICall({
