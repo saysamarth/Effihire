@@ -50,19 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAI-hGMpWs1NgDRtjF0q1WGyn7l3v_DI_U',
-    appId: '1:50293050285:android:8d3c0f0c772592cacf6f24',
-    messagingSenderId: '50293050285',
-    projectId: 'effihire-5026b',
-    storageBucket: 'effihire-5026b.firebasestorage.app',
+    apiKey: 'AIzaSyDgBYNiZ4UiwhIprpNdo_8QBBpo0bONCm0',
+    appId: '1:413881959029:android:d63044a2738647688a6e3c',
+    messagingSenderId: '413881959029',
+    projectId: 'effihire-39f57',
+    storageBucket: 'effihire-39f57.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDdksJtHk-BMua0ySAlJf7O6Coe0fnWJzs',
-    appId: '1:50293050285:ios:d174c0010b5fbf14cf6f24',
-    messagingSenderId: '50293050285',
-    projectId: 'effihire-5026b',
-    storageBucket: 'effihire-5026b.firebasestorage.app',
+    apiKey: 'AIzaSyB0zWhujt1Y80rCPrzKBeaDDbf3kUKb6fg',
+    appId: '1:413881959029:ios:7e0ac4028fce27e28a6e3c',
+    messagingSenderId: '413881959029',
+    projectId: 'effihire-39f57',
+    storageBucket: 'effihire-39f57.firebasestorage.app',
     iosBundleId: 'com.example.effihire',
   );
+
 }

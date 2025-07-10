@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "50293050285",
-    "project_id": "effihire-5026b",
-    "storage_bucket": "effihire-5026b.firebasestorage.app"
+    "project_number": "413881959029",
+    "project_id": "effihire-39f57",
+    "storage_bucket": "effihire-39f57.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:50293050285:android:8d3c0f0c772592cacf6f24",
+        "mobilesdk_app_id": "1:413881959029:android:d63044a2738647688a6e3c",
         "android_client_info": {
           "package_name": "com.example.effihire"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAI-hGMpWs1NgDRtjF0q1WGyn7l3v_DI_U"
+          "current_key": "AIzaSyDgBYNiZ4UiwhIprpNdo_8QBBpo0bONCm0"
         }
       ],
       "services": {
