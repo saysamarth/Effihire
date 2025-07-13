@@ -47,8 +47,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   final PhotoCaptureService _photoCaptureService = PhotoCaptureService();
   final OCRService _ocrService = OCRService();
 
-  Map<String, bool> _documentLoadingStates = {};
-  Map<String, DocumentResponse> _documentResponses = {};
+  final Map<String, bool> _documentLoadingStates = {};
+  final Map<String, DocumentResponse> _documentResponses = {};
 
   @override
   void initState() {

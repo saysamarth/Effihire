@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import 'dart:async';
+
+import 'package:effihire/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -319,20 +321,62 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  String _getCleanPhoneNumber() {
+    return _phoneController.text.trim();
+  }
+
+  Future<void> _handleDatabaseError(dynamic apiError) async {
+    try {
+      // Sign out from Firebase to maintain consistency
+      await _auth.signOut();
+    } catch (signOutError) {
+      print('Error signing out: $signOutError');
+    }
+    _setLoadingState(false);
+    _stopResendTimer();
+
+    setState(() {
+      _isOtpSent = false;
+      _canResend = true;
+      _resendCountdown = 0;
+      _verificationId = null;
+      _resendToken = null;
+    });
+    _otpController.clear();
+    _showMessage('Network error. Please try again.');
+    print('API Error: $apiError'); // For debugging
+  }
+
+  // Helper function for successful login
+  void _handleSuccessfulLogin() {
+    _setLoadingState(false);
+    _stopResendTimer();
+    _showMessage('Login successful!');
+
+    if (mounted) {
+      context.go('/location');
+    }
+  }
+
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     try {
       final userCredential = await _auth.signInWithCredential(credential);
-      _setLoadingState(false);
-
       if (userCredential.user != null) {
-        _showMessage('Login successful!');
-        _stopResendTimer();
-
-        // Navigate to home with replacement to prevent back navigation
-        if (mounted) {
-          context.go('/location');
+        final phoneNumber = _getCleanPhoneNumber();
+        try {
+          final checkResponse = await ApiService.checkUserExists(phoneNumber);
+          if (checkResponse['exists'] == true) {
+            _handleSuccessfulLogin();
+          } else {
+            await ApiService.createUser(phoneNumber);
+            _handleSuccessfulLogin();
+          }
+        } catch (apiError) {
+          await _handleDatabaseError(apiError);
+          return;
         }
       } else {
+        _setLoadingState(false);
         _showMessage('Authentication failed. Please try again.');
       }
     } catch (e) {
