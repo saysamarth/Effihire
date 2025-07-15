@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // Replace with your actual backend URL
-  static const String baseUrl = 'http://10.0.2.2:3000';
+  static const String baseUrl =
+      'http://192.168.0.107:3000'; //10.0.2.2 for emulator
 
   // Check if user exists by mobile number
   static Future<Map<String, dynamic>> checkUserExists(
@@ -27,20 +28,13 @@ class ApiService {
   }
 
   // Create new user
-  static Future<Map<String, dynamic>> createUser(
-    String mobileNumber, {
-    String? fullName,
-  }) async {
+  static Future<Map<String, dynamic>> createUser(String mobileNumber) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'mobile_number': mobileNumber,
-          'full_name': fullName,
-        }),
+        body: json.encode({'mobile_number': mobileNumber}),
       );
-
       if (response.statusCode == 201) {
         return json.decode(response.body);
       } else {

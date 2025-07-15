@@ -3,21 +3,41 @@ const { syncDatabase } = require('./src/scripts/sync');
 
 const app = express();
 
-// Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
 app.use(express.json());
 
-// Basic health check
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('JSON Parse Error:', err.message);
+        return res.status(400).json({ error: 'Invalid JSON in request body' });
+    }
+    next();
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    console.error('Stack:', err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 app.get('/health', async (req, res) => {
     try {
         const sequelize = require('./src/config/connection');
         await sequelize.authenticate();
         res.json({ status: 'OK', message: 'Database connected' });
     } catch (error) {
+        console.error('Database connection failed:', error.message);
         res.status(500).json({ status: 'ERROR', message: 'Database connection failed' });
     }
 });
 
-// User routes
 app.get('/users', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -26,6 +46,7 @@ app.get('/users', async (req, res) => {
         });
         res.json(users);
     } catch (error) {
+        console.error('Failed to fetch users:', error.message);
         res.status(500).json({ error: 'Failed to fetch users', details: error.message });
     }
 });
@@ -33,7 +54,7 @@ app.get('/users', async (req, res) => {
 app.post('/users', async (req, res) => {
     try {
         const User = require('./src/models/User');
-        const { mobile_number} = req.body;
+        const { mobile_number } = req.body;
 
         if (!mobile_number) {
             return res.status(400).json({ error: 'Mobile number is required' });
@@ -45,6 +66,7 @@ app.post('/users', async (req, res) => {
 
         res.status(201).json(user);
     } catch (error) {
+        console.error('Failed to create user:', error.message);
         res.status(500).json({ error: 'Failed to create user', details: error.message });
     }
 });
@@ -62,11 +84,11 @@ app.get('/users/:id', async (req, res) => {
 
         res.json(user);
     } catch (error) {
+        console.error('Failed to fetch user:', error.message);
         res.status(500).json({ error: 'Failed to fetch user', details: error.message });
     }
 });
 
-// Check if user exists by mobile number
 app.get('/users/check/:mobile', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -83,37 +105,37 @@ app.get('/users/check/:mobile', async (req, res) => {
             res.json({ exists: false });
         }
     } catch (error) {
+        console.error('Failed to check user:', error.message);
         res.status(500).json({ error: 'Failed to check user', details: error.message });
     }
 });
 
-// Route to upload document URLs for a user
 app.patch('/users/:id/documents', async (req, res) => {
     try {
         const User = require('./src/models/User');
-        const { aadhar_url, dl_url, pan_url } = req.body;
+        const { aadhar_front_url, dl_url, pan_url, aadhar_back_url, user_image_url } = req.body;
         const userId = req.params.id;
 
-        // Find user first
         const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Update document URLs
         const updateData = {};
-        if (aadhar_url) updateData.aadhar_url = aadhar_url;
+        if (aadhar_front_url) updateData.aadhar_front_url = aadhar_front_url;
         if (dl_url) updateData.dl_url = dl_url;
         if (pan_url) updateData.pan_url = pan_url;
+        if (aadhar_back_url) updateData.aadhar_back_url = aadhar_back_url;
+        if (user_image_url) updateData.user_image_url = user_image_url;
 
         await user.update(updateData);
         res.json({ message: 'Document URLs updated successfully', user });
     } catch (error) {
+        console.error('Failed to update document URLs:', error.message);
         res.status(500).json({ error: 'Failed to update document URLs', details: error.message });
     }
 });
 
-// Route to complete personal registration and update registration_status to 1
 app.patch('/users/:id/complete-personal-registration', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -125,15 +147,15 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Fields required to already exist (saved earlier)
         const mustAlreadyExist = [
             'mobile_number',
-            'aadhar_url',
+            'aadhar_front_url',
+            'aadhar_back_url',
+            'user_image_url',
             'dl_url',
             'pan_url'
         ];
 
-        // Fields required in this request body
         const mustBeInBody = [
             'full_name',
             'current_address',
@@ -144,12 +166,10 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
             'pan_card'
         ];
 
-        // Check if all mustAlreadyExist fields are present in DB
         const missingFromDB = mustAlreadyExist.filter(
             key => !user[key] || user[key].toString().trim() === ''
         );
 
-        // Check if all mustBeInBody fields are present in req.body
         const missingFromBody = mustBeInBody.filter(
             key => !updateFields[key] || updateFields[key].toString().trim() === ''
         );
@@ -161,7 +181,6 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
             });
         }
 
-        // Update DB with incoming body fields + set registration_status = 1
         await user.update({
             ...updateFields,
             registration_status: 1
@@ -173,11 +192,11 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
             next_step: 'Please complete bank registration'
         });
     } catch (error) {
+        console.error('Failed to complete personal registration:', error.message);
         res.status(500).json({ error: 'Failed to complete personal registration', details: error.message });
     }
 });
 
-// Route to toggle user online status
 app.patch('/users/:id/toggle-online', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -196,11 +215,11 @@ app.patch('/users/:id/toggle-online', async (req, res) => {
             user
         });
     } catch (error) {
+        console.error('Failed to update online status:', error.message);
         res.status(500).json({ error: 'Failed to update online status', details: error.message });
     }
 });
 
-// Route to update registration status to 3 (police verification completed)
 app.patch('/users/:id/complete-police-verification', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -226,11 +245,11 @@ app.patch('/users/:id/complete-police-verification', async (req, res) => {
             status: 'User is now fully registered'
         });
     } catch (error) {
+        console.error('Failed to complete police verification:', error.message);
         res.status(500).json({ error: 'Failed to complete police verification', details: error.message });
     }
 });
 
-// Bank Details routes
 app.get('/bank-details', async (req, res) => {
     try {
         const BankDetails = require('./src/models/BankDetails');
@@ -239,11 +258,11 @@ app.get('/bank-details', async (req, res) => {
         });
         res.json(bankDetails);
     } catch (error) {
+        console.error('Failed to fetch bank details:', error.message);
         res.status(500).json({ error: 'Failed to fetch bank details', details: error.message });
     }
 });
 
-// Modified to update registration_status to 2 when bank details are created
 app.post('/bank-details', async (req, res) => {
     try {
         const BankDetails = require('./src/models/BankDetails');
@@ -283,11 +302,11 @@ app.post('/bank-details', async (req, res) => {
             next_step: 'Please complete police verification'
         });
     } catch (error) {
+        console.error('Failed to create bank details:', error.message);
         res.status(500).json({ error: 'Failed to create bank details', details: error.message });
     }
 });
 
-// Company routes
 app.get('/companies', async (req, res) => {
     try {
         const Company = require('./src/models/Company');
@@ -296,6 +315,7 @@ app.get('/companies', async (req, res) => {
         });
         res.json(companies);
     } catch (error) {
+        console.error('Failed to fetch companies:', error.message);
         res.status(500).json({ error: 'Failed to fetch companies', details: error.message });
     }
 });
@@ -313,11 +333,11 @@ app.get('/companies/:id', async (req, res) => {
 
         res.json(company);
     } catch (error) {
+        console.error('Failed to fetch company:', error.message);
         res.status(500).json({ error: 'Failed to fetch company', details: error.message });
     }
 });
 
-// Task routes
 app.get('/tasks', async (req, res) => {
     try {
         const Task = require('./src/models/Task');
@@ -326,11 +346,11 @@ app.get('/tasks', async (req, res) => {
         });
         res.json(tasks);
     } catch (error) {
+        console.error('Failed to fetch tasks:', error.message);
         res.status(500).json({ error: 'Failed to fetch tasks', details: error.message });
     }
 });
 
-// Task Application routes
 app.get('/task-applications', async (req, res) => {
     try {
         const TaskApplication = require('./src/models/TaskApplication');
@@ -339,6 +359,7 @@ app.get('/task-applications', async (req, res) => {
         });
         res.json(applications);
     } catch (error) {
+        console.error('Failed to fetch task applications:', error.message);
         res.status(500).json({ error: 'Failed to fetch task applications', details: error.message });
     }
 });
@@ -380,11 +401,11 @@ app.post('/task-applications', async (req, res) => {
 
         res.status(201).json(application);
     } catch (error) {
+        console.error('Failed to create task application:', error.message);
         res.status(500).json({ error: 'Failed to create task application', details: error.message });
     }
 });
 
-// Payment routes
 app.get('/payments', async (req, res) => {
     try {
         const Payment = require('./src/models/Payment');
@@ -393,43 +414,33 @@ app.get('/payments', async (req, res) => {
         });
         res.json(payments);
     } catch (error) {
+        console.error('Failed to fetch payments:', error.message);
         res.status(500).json({ error: 'Failed to fetch payments', details: error.message });
     }
 });
 
-// 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
+app.use((err, req, res, next) => {
+    console.error('Express Error Handler:', err.message);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+});
+
 syncDatabase()
     .then(() => {
-        console.log('✅ Database synced');
-        app.listen(3000, () => {
-            console.log('🚀 Server running at http://localhost:3000');
-            console.log('📋 Available routes:');
-            console.log('  GET  /health - Health check');
-            console.log('  GET  /users - Get all users');
-            console.log('  POST /users - Create new user');
-            console.log('  GET  /users/:id - Get user by ID');
-            console.log('  PATCH /users/:id/documents - Upload document URLs');
-            console.log('  PATCH /users/:id/complete-personal-registration - Complete personal registration');
-            console.log('  PATCH /users/:id/toggle-online - Toggle user online status');
-            console.log('  PATCH /users/:id/complete-police-verification - Complete police verification');
-            console.log('  GET  /bank-details - Get all bank details');
-            console.log('  POST /bank-details - Create bank details (updates registration_status to 2)');
-            console.log('  GET  /companies - Get all companies');
-            console.log('  GET  /companies/:id - Get company by ID');
-            console.log('  GET  /tasks - Get all tasks');
-            console.log('  GET  /task-applications - Get all task applications');
-            console.log('  POST /task-applications - Create task application');
-            console.log('  GET  /payments - Get all payments');
-            console.log('  ?user_id=<uuid> - Required to check user online status');
+        console.log('Database synced successfully');
+        const server = app.listen(3000, () => {
+            console.log('Server running at http://localhost:3000');
+        });
+
+        server.on('error', (err) => {
+            console.error('Server error:', err);
         });
     })
     .catch(err => {
-        console.error('❌ Failed to start server:', err);
+        console.error('Failed to start server:', err);
         process.exit(1);
     });
 

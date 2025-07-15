@@ -41,7 +41,11 @@ const User = sequelize.define('User', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
-    aadhar_url: {
+    aadhar_front_url: {
+        type: DataTypes.TEXT,
+        unique: true,
+    },
+    aadhar_back_url: {
         type: DataTypes.TEXT,
         unique: true,
     },
@@ -50,6 +54,10 @@ const User = sequelize.define('User', {
         unique: true,
     },
     pan_url: {
+        type: DataTypes.TEXT,
+        unique: true,
+    },
+    user_image_url: {
         type: DataTypes.TEXT,
         unique: true,
     },

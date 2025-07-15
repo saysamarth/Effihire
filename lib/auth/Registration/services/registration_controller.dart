@@ -1,34 +1,38 @@
 import 'package:flutter/material.dart';
+
 import '../models/registration_model.dart';
+import 'register_backend_service.dart';
 
 class RegistrationController extends ChangeNotifier {
   final RegistrationData _registrationData = RegistrationData();
+  final RegistrationService _registrationService = RegistrationService();
   int _currentStep = 0;
   bool _isDetailsConfirmed = false;
   bool _isLoading = false;
+  final String userId;
 
-  // Getters
+  RegistrationController({required this.userId});
+
   RegistrationData get registrationData => _registrationData;
   int get currentStep => _currentStep;
   bool get isDetailsConfirmed => _isDetailsConfirmed;
   bool get isLoading => _isLoading;
 
-  // Form validation methods
   bool validatePersonalInfo({
     required GlobalKey<FormState> formKey,
     required String? gender,
   }) {
-    return (formKey.currentState?.validate() ?? false) && gender != null;
+    final formValid = formKey.currentState?.validate() ?? false;
+    final genderValid = gender != null;
+    return formValid && genderValid;
   }
 
-  bool validateDocuments({
-    required GlobalKey<FormState> formKey,
-  }) {
-    return (formKey.currentState?.validate() ?? false) && 
-           _registrationData.isDocumentsComplete;
+  bool validateDocuments({required GlobalKey<FormState> formKey}) {
+    final formValid = formKey.currentState?.validate() ?? false;
+    final documentsComplete = _registrationData.isDocumentsComplete;
+    return formValid && documentsComplete;
   }
 
-  // Step navigation
   void nextStep() {
     if (_currentStep < 2) {
       _currentStep++;
@@ -50,7 +54,6 @@ class RegistrationController extends ChangeNotifier {
     }
   }
 
-  // Update personal data
   void updatePersonalData({
     required String fullName,
     required String currentAddress,
@@ -68,25 +71,21 @@ class RegistrationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Update vehicle selection
   void updateVehicleSelection(String vehicle) {
     _registrationData.selectedVehicle = vehicle;
     notifyListeners();
   }
 
-  // Update document
   void updateDocument(String documentType, dynamic file) {
     _registrationData.updateDocument(documentType, file);
     notifyListeners();
   }
 
-  // Update gender
   void updateGender(String gender) {
     _registrationData.gender = gender;
     notifyListeners();
   }
 
-  // Update address checkbox
   void updateSameAsCurrentAddress(bool value, String currentAddress) {
     _registrationData.sameAsCurrentAddress = value;
     if (value) {
@@ -95,13 +94,11 @@ class RegistrationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Update confirmation status
   void updateConfirmationStatus(bool isConfirmed) {
     _isDetailsConfirmed = isConfirmed;
     notifyListeners();
   }
 
-  // Submit registration
   Future<bool> submitRegistration() async {
     if (!_registrationData.isDocumentsComplete || !_isDetailsConfirmed) {
       return false;
@@ -111,15 +108,38 @@ class RegistrationController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Here you would make actual API call
-      // final result = await _apiService.submitRegistration(_registrationData);
-      
+      final documents = _registrationData.documents;
+      for (var entry in documents.entries) {
+        if (entry.value != null) {
+          final downloadUrl = await _registrationService.uploadImageToFirebase(
+            entry.value!,
+            entry.key,
+            userId,
+          );
+          if (downloadUrl != null) {
+            await _registrationService.submitDocumentUrl(
+              userId,
+              entry.key,
+              downloadUrl,
+            );
+          }
+        }
+      }
+
+      final success = await _registrationService
+          .completePersonalRegistration(userId, {
+            'full_name': _registrationData.fullName,
+            'current_address': _registrationData.currentAddress,
+            'permanent_address': _registrationData.permanentAddress,
+            'vehicle_details': _registrationData.selectedVehicle,
+            'qualification': _registrationData.qualification,
+            'languages': _registrationData.languages,
+            'gender': _registrationData.gender,
+          });
+
       _isLoading = false;
       notifyListeners();
-      return true;
+      return success;
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -127,7 +147,6 @@ class RegistrationController extends ChangeNotifier {
     }
   }
 
-  // Get validation error message
   String getValidationErrorMessage(int step) {
     switch (step) {
       case 0:
@@ -144,13 +163,10 @@ class RegistrationController extends ChangeNotifier {
     }
   }
 
-  // Reset controller
   void reset() {
     _currentStep = 0;
     _isDetailsConfirmed = false;
     _isLoading = false;
-    // Reset registration data if needed
     notifyListeners();
   }
-
 }

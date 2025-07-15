@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:effihire/auth/auth_service.dart';
+import 'package:effihire/config/service/shared_pref.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -344,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen>
     });
     _otpController.clear();
     _showMessage('Network error. Please try again.');
-    print('API Error: $apiError'); // For debugging
+    print('API Error: $apiError');
   }
 
   // Helper function for successful login
@@ -366,14 +367,17 @@ class _LoginScreenState extends State<LoginScreen>
         try {
           final checkResponse = await ApiService.checkUserExists(phoneNumber);
           if (checkResponse['exists'] == true) {
-            _handleSuccessfulLogin();
+            final userId = checkResponse['user']['id'];
+            await SharedPrefsService.setUserUid(userId);
           } else {
-            await ApiService.createUser(phoneNumber);
-            _handleSuccessfulLogin();
+            final createResponse = await ApiService.createUser(phoneNumber);
+            final userId = createResponse['id'];
+            await SharedPrefsService.setUserUid(userId);
           }
+          _handleSuccessfulLogin();
         } catch (apiError) {
+          print('API Error Details: $apiError');
           await _handleDatabaseError(apiError);
-          return;
         }
       } else {
         _setLoadingState(false);

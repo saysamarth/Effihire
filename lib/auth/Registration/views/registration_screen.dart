@@ -1,19 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 
-// Import your files
-import '../models/registration_model.dart';
-import '../../../config/media/document_scanner_service.dart';
-import '../../../config/media/camera_service.dart';
-import '../widgets/review_step_widget.dart';
-import '../widgets/documents_widget.dart';
-import '../services/registration_controller.dart';
-import '../../../common widgets/snackbar_helper.dart';
-import '../widgets/common.dart';
-import '../widgets/personal_info_widget.dart';
-import 'package:effihire/auth/Registration/services/ocr_service.dart';
 import 'package:effihire/auth/Registration/models/ocr_model.dart';
+import 'package:effihire/auth/Registration/services/ocr_service.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../common widgets/snackbar_helper.dart';
+import '../../../config/media/camera_service.dart';
+import '../../../config/media/document_scanner_service.dart';
+import '../../../config/service/shared_pref.dart';
+
+import '../models/registration_model.dart';
+import '../services/register_backend_service.dart';
+import '../services/registration_controller.dart';
+import '../widgets/common.dart';
+import '../widgets/documents_widget.dart';
+import '../widgets/personal_info_widget.dart';
+import '../widgets/review_step_widget.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -46,6 +49,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       DocumentScannerService();
   final PhotoCaptureService _photoCaptureService = PhotoCaptureService();
   final OCRService _ocrService = OCRService();
+  final RegistrationService _registrationService = RegistrationService();
 
   final Map<String, bool> _documentLoadingStates = {};
   final Map<String, DocumentResponse> _documentResponses = {};
@@ -53,7 +57,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   @override
   void initState() {
     super.initState();
-    _registrationController = RegistrationController();
+    _registrationController = RegistrationController(
+      userId: SharedPrefsService.getUserUid()!,
+    );
     _initializeAnimations();
     _initializeServices();
   }
@@ -185,6 +191,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
           );
           return;
         }
+
         await _handleDocumentScan(documentType, scannedImage);
       }
     } catch (e) {
@@ -195,40 +202,101 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     }
   }
 
+  Future<void> _uploadDocumentToBackend(
+    String documentType,
+    File imageFile,
+  ) async {
+    try {
+      final userId = SharedPrefsService.getUserUid();
+
+      if (userId == null) {
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          'User ID not found. Please log in again.',
+        );
+        return;
+      }
+
+      final downloadUrl = await _registrationService.uploadImageToFirebase(
+        imageFile,
+        documentType,
+        userId,
+      );
+
+      if (downloadUrl != null) {
+        final backendSuccess = await _registrationService.submitDocumentUrl(
+          userId,
+          documentType,
+          downloadUrl,
+        );
+
+        if (!backendSuccess) {
+          SnackbarHelper.showErrorSnackBar(
+            context,
+            'Failed to save document URL to backend',
+          );
+        }
+      } else {
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          'Failed to upload image to Firebase Storage',
+        );
+      }
+    } catch (e) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Document upload failed: ${e.toString()}',
+      );
+    }
+  }
+
   Future<void> _handleDocumentScan(String documentType, File imageFile) async {
     if (!await imageFile.exists()) {
+      SnackbarHelper.showErrorSnackBar(context, 'Image file not found');
       return;
     }
+
     setState(() {
       _documentLoadingStates[documentType] = true;
     });
+
     try {
       final response = await _ocrService.processDocument(
         documentType,
         imageFile,
       );
 
-      setState(() {
-        if (response.isSuccess) {
+      if (response.isSuccess) {
+        setState(() {
           _documentResponses[documentType] = response.documentResponse!;
           _registrationController.updateDocument(documentType, imageFile);
+        });
 
-          // Show success message
-          String successMessage = documentType == 'selfie'
-              ? 'Selfie captured successfully!'
-              : 'Document verified successfully!';
-          SnackbarHelper.showSuccessSnackBar(context, successMessage);
-        } else {
-          // Show error message based on result type
-          SnackbarHelper.showErrorSnackBar(context, response.errorMessage!);
+        if (documentType == 'aadhar_front' ||
+            documentType == 'aadhar_back' ||
+            documentType == 'pan_card') {
+          await _uploadDocumentToBackend(documentType, imageFile);
         }
-      });
+
+        if (documentType == 'selfie' || documentType == 'driving_license') {
+          await _uploadDocumentToBackend(documentType, imageFile);
+        }
+
+        String successMessage = documentType == 'selfie'
+            ? 'Selfie captured successfully!'
+            : documentType == 'driving_license'
+            ? 'Driving license uploaded successfully!'
+            : 'Document verified successfully!';
+
+        SnackbarHelper.showSuccessSnackBar(context, successMessage);
+      } else {
+        SnackbarHelper.showErrorSnackBar(context, response.errorMessage!);
+      }
     } catch (e) {
       SnackbarHelper.showErrorSnackBar(
         context,
         'Processing failed, please try again',
       );
-      print('OCR processing failed: $e');
     } finally {
       setState(() {
         _documentLoadingStates[documentType] = false;
@@ -244,9 +312,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       );
       return;
     }
-
     final success = await _registrationController.submitRegistration();
-
     if (success) {
       _showSuccessDialog();
     } else {
