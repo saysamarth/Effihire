@@ -69,6 +69,15 @@ const User = sequelize.define('User', {
             max: 3
         },
         comment: "0: New User, 1: Personal Info Done, 2: Bank Info Done, 3: Police Verification done/Fully Registered"
+    },
+    qualification: {
+        type: DataTypes.STRING,
+    },
+    languages: {
+        type: DataTypes.STRING,
+    },
+    gender: {
+        type: DataTypes.ENUM('male', 'female', 'other'),
     }
 }, {
     timestamps: true,

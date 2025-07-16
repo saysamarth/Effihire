@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:effihire/auth/Registration/models/ocr_model.dart';
 import 'package:flutter/material.dart';
 
 class RegistrationData {
@@ -10,11 +11,13 @@ class RegistrationData {
   String languages;
   String? gender;
   bool sameAsCurrentAddress;
-  
+
   // Vehicle and Documents
   String? selectedVehicle;
   Map<String, File?> documents;
-  
+  Map<String, String?> documentUrls;
+  Map<String, DocumentResponse?> ocrData;
+
   RegistrationData({
     this.fullName = '',
     this.currentAddress = '',
@@ -25,38 +28,68 @@ class RegistrationData {
     this.sameAsCurrentAddress = false,
     this.selectedVehicle,
     Map<String, File?>? documents,
-  }) : documents = documents ?? {
-    'aadhar_front': null,
-    'aadhar_back': null,
-    'pan_card': null,
-    'driving_license': null,
-    'selfie': null,
-  };
-  
+    Map<String, String?>? documentUrls,
+    Map<String, DocumentResponse?>? ocrData,
+  }) : documents =
+           documents ??
+           {
+             'aadhar_front': null,
+             'aadhar_back': null,
+             'pan_card': null,
+             'driving_license': null,
+             'selfie': null,
+           },
+       documentUrls =
+           documentUrls ??
+           {
+             'aadhar_front': null,
+             'aadhar_back': null,
+             'pan_card': null,
+             'driving_license': null,
+             'selfie': null,
+           },
+       ocrData = ocrData ?? {'aadhar_number': null, 'pan_card': null};
+
   bool get isPersonalInfoComplete {
     return fullName.isNotEmpty &&
-           currentAddress.isNotEmpty &&
-           permanentAddress.isNotEmpty &&
-           qualification.isNotEmpty &&
-           languages.isNotEmpty &&
-           gender != null;
+        currentAddress.isNotEmpty &&
+        permanentAddress.isNotEmpty &&
+        qualification.isNotEmpty &&
+        languages.isNotEmpty &&
+        gender != null;
   }
-  
+
   bool get isDocumentsComplete {
     return selectedVehicle != null &&
-           documents['aadhar_front'] != null &&
-           documents['aadhar_back'] != null &&
-           documents['pan_card'] != null &&
-           documents['driving_license'] != null &&
-           documents['selfie'] != null;
+        documents['aadhar_front'] != null &&
+        documents['aadhar_back'] != null &&
+        documents['pan_card'] != null &&
+        documents['driving_license'] != null &&
+        documents['selfie'] != null;
   }
-  
+
   void updateDocument(String type, File? file) {
     documents[type] = file;
   }
-  
+
   File? getDocument(String type) {
     return documents[type];
+  }
+
+  void updateDocumentUrl(String type, String url) {
+    documentUrls[type] = url;
+  }
+
+  void updateOcrData(String type, DocumentResponse data) {
+    ocrData[type] = data;
+  }
+
+  String? getDocumentUrl(String type) {
+    return documentUrls[type];
+  }
+
+  DocumentResponse? getOcrData(String type) {
+    return ocrData[type];
   }
 }
 
@@ -64,13 +97,13 @@ class VehicleOption {
   final String name;
   final IconData icon;
   final Color color;
-  
+
   const VehicleOption({
     required this.name,
     required this.icon,
     required this.color,
   });
-  
+
   static const List<VehicleOption> options = [
     VehicleOption(
       name: 'Bike',
@@ -100,14 +133,14 @@ class DocumentType {
   final String title;
   final IconData icon;
   final bool isCameraOnly;
-  
+
   const DocumentType({
     required this.id,
     required this.title,
     required this.icon,
     this.isCameraOnly = false,
   });
-  
+
   static const List<DocumentType> requiredDocuments = [
     DocumentType(
       id: 'aadhar_front',
@@ -119,11 +152,7 @@ class DocumentType {
       title: 'Aadhar Card (Back)',
       icon: Icons.credit_card,
     ),
-    DocumentType(
-      id: 'pan_card',
-      title: 'PAN Card',
-      icon: Icons.badge,
-    ),
+    DocumentType(id: 'pan_card', title: 'PAN Card', icon: Icons.badge),
     DocumentType(
       id: 'driving_license',
       title: 'Driving License',
@@ -138,11 +167,9 @@ class DocumentType {
   ];
 }
 
-
-
 class AppConstants {
   static const Color primaryColor = Color(0xFF5B3E86);
   static const Color backgroundColor = Color(0xFFF8F9FA);
-  
+
   static const List<String> genderOptions = ['Male', 'Female', 'Other'];
 }

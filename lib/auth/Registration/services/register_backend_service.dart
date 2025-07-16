@@ -34,53 +34,6 @@ class RegistrationService {
     }
   }
 
-  Future<bool> submitDocumentUrl(
-    String userId,
-    String documentType,
-    String downloadUrl,
-  ) async {
-    try {
-      Map<String, String> documentData = {};
-      switch (documentType) {
-        case 'aadhar_front':
-          documentData['aadhar_url'] = downloadUrl;
-          break;
-        case 'aadhar_back':
-          documentData['aadharBack_url'] = downloadUrl;
-          break;
-        case 'driving_license':
-          documentData['dl_url'] = downloadUrl;
-          break;
-        case 'pan_card':
-          documentData['pan_url'] = downloadUrl;
-          break;
-        case 'selfie':
-          documentData['user_image_url'] = downloadUrl;
-          break;
-        default:
-          return false;
-      }
-
-      final endpoint = '$baseUrl/users/$userId/documents';
-
-      final response = await http.patch(
-        Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(documentData),
-      );
-
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        print('Backend submission failed with status ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      print('Error submitting document URL to backend: $e');
-      return false;
-    }
-  }
-
   Future<bool> completePersonalRegistration(
     String userId,
     Map<String, dynamic> userData,

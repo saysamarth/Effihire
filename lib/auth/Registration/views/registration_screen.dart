@@ -9,7 +9,6 @@ import '../../../common widgets/snackbar_helper.dart';
 import '../../../config/media/camera_service.dart';
 import '../../../config/media/document_scanner_service.dart';
 import '../../../config/service/shared_pref.dart';
-
 import '../models/registration_model.dart';
 import '../services/register_backend_service.dart';
 import '../services/registration_controller.dart';
@@ -202,7 +201,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     }
   }
 
-  Future<void> _uploadDocumentToBackend(
+  Future<void> _uploadImageToFirebase(
     String documentType,
     File imageFile,
   ) async {
@@ -224,18 +223,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       );
 
       if (downloadUrl != null) {
-        final backendSuccess = await _registrationService.submitDocumentUrl(
-          userId,
-          documentType,
-          downloadUrl,
-        );
-
-        if (!backendSuccess) {
-          SnackbarHelper.showErrorSnackBar(
-            context,
-            'Failed to save document URL to backend',
-          );
-        }
+        _registrationController.updateDocumentUrl(documentType, downloadUrl);
       } else {
         SnackbarHelper.showErrorSnackBar(
           context,
@@ -249,6 +237,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       );
     }
   }
+
+  // In registration_screen.dart
 
   Future<void> _handleDocumentScan(String documentType, File imageFile) async {
     if (!await imageFile.exists()) {
@@ -266,21 +256,35 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         imageFile,
       );
 
-      if (response.isSuccess) {
+      if (response.isSuccess && response.documentResponse != null) {
+        // --- START OF FIX ---
+
+        // Determine the correct key for storing the OCR data.
+        String ocrStorageKey;
+        if (documentType == 'aadhar_front' || documentType == 'aadhar_back') {
+          ocrStorageKey =
+              'aadhar_number'; // Use the generic key for Aadhaar data
+        } else if (documentType == 'pan_card') {
+          ocrStorageKey = 'pan_card'; // Use the generic key for PAN data
+        } else {
+          // For other documents, this won't be used for retrieval, but we can default it.
+          ocrStorageKey = documentType;
+        }
+
+        // --- END OF FIX ---
+
         setState(() {
           _documentResponses[documentType] = response.documentResponse!;
           _registrationController.updateDocument(documentType, imageFile);
+
+          // Update OCR data using the CORRECT, consistent key
+          _registrationController.updateOcrData(
+            ocrStorageKey,
+            response.documentResponse!,
+          );
         });
 
-        if (documentType == 'aadhar_front' ||
-            documentType == 'aadhar_back' ||
-            documentType == 'pan_card') {
-          await _uploadDocumentToBackend(documentType, imageFile);
-        }
-
-        if (documentType == 'selfie' || documentType == 'driving_license') {
-          await _uploadDocumentToBackend(documentType, imageFile);
-        }
+        await _uploadImageToFirebase(documentType, imageFile);
 
         String successMessage = documentType == 'selfie'
             ? 'Selfie captured successfully!'

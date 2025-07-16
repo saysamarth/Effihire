@@ -110,32 +110,6 @@ app.get('/users/check/:mobile', async (req, res) => {
     }
 });
 
-app.patch('/users/:id/documents', async (req, res) => {
-    try {
-        const User = require('./src/models/User');
-        const { aadhar_front_url, dl_url, pan_url, aadhar_back_url, user_image_url } = req.body;
-        const userId = req.params.id;
-
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const updateData = {};
-        if (aadhar_front_url) updateData.aadhar_front_url = aadhar_front_url;
-        if (dl_url) updateData.dl_url = dl_url;
-        if (pan_url) updateData.pan_url = pan_url;
-        if (aadhar_back_url) updateData.aadhar_back_url = aadhar_back_url;
-        if (user_image_url) updateData.user_image_url = user_image_url;
-
-        await user.update(updateData);
-        res.json({ message: 'Document URLs updated successfully', user });
-    } catch (error) {
-        console.error('Failed to update document URLs:', error.message);
-        res.status(500).json({ error: 'Failed to update document URLs', details: error.message });
-    }
-});
-
 app.patch('/users/:id/complete-personal-registration', async (req, res) => {
     try {
         const User = require('./src/models/User');
@@ -146,14 +120,12 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+        if (updateFields.gender) {
+            updateFields.gender = updateFields.gender.toLowerCase();
+        }
 
         const mustAlreadyExist = [
             'mobile_number',
-            'aadhar_front_url',
-            'aadhar_back_url',
-            'user_image_url',
-            'dl_url',
-            'pan_url'
         ];
 
         const mustBeInBody = [
@@ -162,8 +134,16 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
             'permanent_address',
             'vehicle_details',
             'aadhar_number',
-            'driving_license',
-            'pan_card'
+            'qualification',
+            'languages',
+            'gender',
+            'aadhar_front_url',
+            'aadhar_back_url',
+            'pan_url',
+            'dl_url',
+            'user_image_url',
+            'aadhar_number',
+            'pan_card',
         ];
 
         const missingFromDB = mustAlreadyExist.filter(

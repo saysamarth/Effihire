@@ -1,3 +1,4 @@
+import 'package:effihire/auth/Registration/models/ocr_model.dart';
 import 'package:flutter/material.dart';
 
 import '../models/registration_model.dart';
@@ -99,48 +100,83 @@ class RegistrationController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateDocumentUrl(String documentType, String url) {
+    _registrationData.updateDocumentUrl(documentType, url);
+    notifyListeners();
+  }
+
+  void updateOcrData(String documentType, DocumentResponse data) {
+    _registrationData.updateOcrData(documentType, data);
+    notifyListeners();
+  }
+
   Future<bool> submitRegistration() async {
-    if (!_registrationData.isDocumentsComplete || !_isDetailsConfirmed) {
+    // --- START: PRE-SUBMISSION VALIDATION ---
+
+    // Get all data points first
+    final dlUrl = _registrationData.getDocumentUrl('driving_license');
+    final selfieUrl = _registrationData.getDocumentUrl('selfie');
+    final aadharOcr = _registrationData.getOcrData('aadhar_number');
+    final panOcr = _registrationData.getOcrData('pan_card');
+
+    // Check each required piece of data for null or empty values
+    if (dlUrl == null || dlUrl.isEmpty) {
+      print("Validation Failed: Driving License URL is missing.");
+      // Optionally show a user-facing error message here
       return false;
     }
+    if (selfieUrl == null || selfieUrl.isEmpty) {
+      print("Validation Failed: Selfie URL is missing.");
+      return false;
+    }
+    if (aadharOcr?.aadhaar?.aadhaarNumber == null) {
+      print("Validation Failed: Aadhaar Number from OCR is missing.");
+      return false;
+    }
+    if (panOcr?.pan?.panNumber == null) {
+      print("Validation Failed: PAN Number from OCR is missing.");
+      return false;
+    }
+    if (!_isDetailsConfirmed) {
+      print("Validation Failed: Details are not confirmed by the user.");
+      return false;
+    }
+
+    // --- END: PRE-SUBMISSION VALIDATION ---
 
     _isLoading = true;
     notifyListeners();
 
     try {
-      final documents = _registrationData.documents;
-      for (var entry in documents.entries) {
-        if (entry.value != null) {
-          final downloadUrl = await _registrationService.uploadImageToFirebase(
-            entry.value!,
-            entry.key,
-            userId,
-          );
-          if (downloadUrl != null) {
-            await _registrationService.submitDocumentUrl(
-              userId,
-              entry.key,
-              downloadUrl,
-            );
-          }
-        }
-      }
+      // Now that we've validated, we can safely build the map
+      Map<String, dynamic> userData = {
+        'full_name': _registrationData.fullName,
+        'current_address': _registrationData.currentAddress,
+        'permanent_address': _registrationData.permanentAddress,
+        'vehicle_details': _registrationData.selectedVehicle,
+        'qualification': _registrationData.qualification,
+        'languages': _registrationData.languages,
+        'gender': _registrationData.gender?.toLowerCase(),
+        'aadhar_front_url': _registrationData.getDocumentUrl('aadhar_front'),
+        'aadhar_back_url': _registrationData.getDocumentUrl('aadhar_back'),
+        'pan_url': _registrationData.getDocumentUrl('pan_card'),
+        'dl_url': dlUrl, // Use the validated variable
+        'user_image_url': selfieUrl, // Use the validated variable
+        'aadhar_number':
+            aadharOcr!.aadhaar!.aadhaarNumber, // Use the validated variable
+        'pan_card': panOcr!.pan!.panNumber, // Use the validated variable
+      };
 
-      final success = await _registrationService
-          .completePersonalRegistration(userId, {
-            'full_name': _registrationData.fullName,
-            'current_address': _registrationData.currentAddress,
-            'permanent_address': _registrationData.permanentAddress,
-            'vehicle_details': _registrationData.selectedVehicle,
-            'qualification': _registrationData.qualification,
-            'languages': _registrationData.languages,
-            'gender': _registrationData.gender,
-          });
+      final success = await _registrationService.completePersonalRegistration(
+        userId,
+        userData,
+      );
 
       _isLoading = false;
       notifyListeners();
       return success;
     } catch (e) {
+      print('Error during API call: $e');
       _isLoading = false;
       notifyListeners();
       return false;
