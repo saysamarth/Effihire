@@ -249,10 +249,10 @@ class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+
           Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Row(
               children: [
                 Text(
                   title,
@@ -262,16 +262,33 @@ class _PaymentFiltersWidgetState extends State<PaymentFiltersWidget> {
                     color: const Color(0xFF1A1A1A),
                   ),
                 ),
-                const SizedBox(height: 16),
-                ...options.map(
-                  (option) =>
-                      _buildFilterOption(option, selectedValue == option, () {
-                        onSelected(option);
-                        Navigator.of(context).pop();
-                      }),
-                ),
-                const SizedBox(height: 10),
               ],
+            ),
+          ),
+
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  children: [
+                    ...options.map(
+                      (option) => _buildFilterOption(
+                        option,
+                        selectedValue == option,
+                        () {
+                          onSelected(option);
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

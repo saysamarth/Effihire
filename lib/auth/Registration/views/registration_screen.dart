@@ -318,6 +318,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     }
     final success = await _registrationController.submitRegistration();
     if (success) {
+      await SharedPrefsService.setRegistrationStatus(1);
       _showSuccessDialog();
     } else {
       SnackbarHelper.showErrorSnackBar(

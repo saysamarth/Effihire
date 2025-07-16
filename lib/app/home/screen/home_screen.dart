@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../models/opportunity.dart';
+import '../widgets/company_detail_sheet.dart';
 import '../widgets/curved_background_clipper.dart';
 import '../widgets/home_widgets.dart';
-import '../widgets/company_detail_sheet.dart';
+import '../widgets/opportunity_filters_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,11 +23,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _cardAnimation;
   late Animation<double> _opportunitiesAnimation;
 
-  String? selectedOpportunity;
+  OpportunityFilters currentFilters = const OpportunityFilters();
+  List<Opportunity> filteredOpportunities = [];
 
   late double screenHeight;
   late double screenWidth;
-  late List<Map<String, dynamic>> opportunities;
 
   late TextStyle titleTextStyle;
   late TextStyle buttonTextStyle;
@@ -35,7 +37,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _initializeAnimations();
     _startAnimations();
-    opportunities = OpportunityData.getOpportunityButtons();
+    _initializeFilteredOpportunities();
+  }
+
+  void _initializeFilteredOpportunities() {
+    filteredOpportunities = List.from(OpportunityData.opportunities);
   }
 
   @override
@@ -83,7 +89,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     _opportunitiesAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _opportunitiesController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _opportunitiesController,
+        curve: Curves.easeOutCubic,
+      ),
     );
   }
 
@@ -122,9 +131,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 welcomeAnimation: _welcomeAnimation,
                 cardAnimation: _cardAnimation,
                 opportunitiesAnimation: _opportunitiesAnimation,
-                opportunities: opportunities,
-                selectedOpportunity: selectedOpportunity,
-                onOpportunitySelected: _onOpportunitySelected,
+                currentFilters: currentFilters,
+                onFiltersChanged: _onFiltersChanged,
+                filteredOpportunities: filteredOpportunities,
                 onCompanyTap: _showCompanyDetails,
                 titleTextStyle: titleTextStyle,
                 buttonTextStyle: buttonTextStyle,
@@ -136,15 +145,97 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _onOpportunitySelected(String? opportunityName) {
+  void _onFiltersChanged(OpportunityFilters newFilters) {
     setState(() {
-      selectedOpportunity = opportunityName;
+      currentFilters = newFilters;
+      filteredOpportunities = _applyFilters(newFilters);
     });
-    if (opportunityName != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Selected: $opportunityName')),
-      );
+  }
+
+  List<Opportunity> _applyFilters(OpportunityFilters filters) {
+    List<Opportunity> filtered = List.from(OpportunityData.opportunities);
+
+    if (filters.company != 'All Companies') {
+      filtered = filtered.where((opp) => opp.name == filters.company).toList();
     }
+    if (filters.paymentRange != 'All Ranges') {
+      filtered = filtered
+          .where((opp) => _matchesPaymentRange(opp, filters.paymentRange))
+          .toList();
+    }
+    if (filters.distance != 'All Distances') {
+      filtered = filtered
+          .where((opp) => _matchesDistance(opp, filters.distance))
+          .toList();
+    }
+    if (filters.workType != 'All Types') {}
+    // Sort opportunities
+    filtered = _sortOpportunities(filtered, filters.sort);
+
+    return filtered;
+  }
+
+  bool _matchesPaymentRange(Opportunity opportunity, String paymentRange) {
+    final cleanEarning = opportunity.earning.replaceAll(RegExp(r'[^\d]'), '');
+    final earning = int.tryParse(cleanEarning) ?? 0;
+
+    switch (paymentRange) {
+      case 'Under ₹5,000':
+        return earning < 5000;
+      case '₹5,000 - ₹10,000':
+        return earning >= 5000 && earning <= 10000;
+      case '₹10,000 - ₹20,000':
+        return earning >= 10000 && earning <= 20000;
+      case '₹20,000 - ₹30,000':
+        return earning >= 20000 && earning <= 30000;
+      case 'Above ₹30,000':
+        return earning > 30000;
+      default:
+        return true;
+    }
+  }
+
+  bool _matchesDistance(Opportunity opportunity, String distance) {
+    return true;
+  }
+
+  List<Opportunity> _sortOpportunities(
+    List<Opportunity> opportunities,
+    String sortBy,
+  ) {
+    switch (sortBy) {
+      case 'Highest Pay':
+        opportunities.sort((a, b) {
+          final aEarning =
+              int.tryParse(a.earning.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+          final bEarning =
+              int.tryParse(b.earning.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+          return bEarning.compareTo(aEarning);
+        });
+        break;
+      case 'Lowest Pay':
+        opportunities.sort((a, b) {
+          final aEarning =
+              int.tryParse(a.earning.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+          final bEarning =
+              int.tryParse(b.earning.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+          return aEarning.compareTo(bEarning);
+        });
+        break;
+      case 'Company A-Z':
+        opportunities.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'Company Z-A':
+        opportunities.sort((a, b) => b.name.compareTo(a.name));
+        break;
+      case 'Most Recent':
+        opportunities.shuffle();
+        break;
+      case 'Nearest First':
+      default:
+        break;
+    }
+    return opportunities;
   }
 
   void _showCompanyDetails(Opportunity opportunity) {
@@ -199,10 +290,7 @@ class _BackgroundWidget extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [
-                  Colors.white.withOpacity(0.1),
-                  Colors.transparent,
-                ],
+                colors: [Colors.white.withOpacity(0.1), Colors.transparent],
               ),
             ),
           ),
@@ -218,9 +306,9 @@ class _ContentWidget extends StatelessWidget {
   final Animation<double> welcomeAnimation;
   final Animation<double> cardAnimation;
   final Animation<double> opportunitiesAnimation;
-  final List<Map<String, dynamic>> opportunities;
-  final String? selectedOpportunity;
-  final Function(String?) onOpportunitySelected;
+  final OpportunityFilters currentFilters;
+  final Function(OpportunityFilters) onFiltersChanged;
+  final List<Opportunity> filteredOpportunities;
   final Function(Opportunity) onCompanyTap;
   final TextStyle titleTextStyle;
   final TextStyle buttonTextStyle;
@@ -231,9 +319,9 @@ class _ContentWidget extends StatelessWidget {
     required this.welcomeAnimation,
     required this.cardAnimation,
     required this.opportunitiesAnimation,
-    required this.opportunities,
-    required this.selectedOpportunity,
-    required this.onOpportunitySelected,
+    required this.currentFilters,
+    required this.onFiltersChanged,
+    required this.filteredOpportunities,
     required this.onCompanyTap,
     required this.titleTextStyle,
     required this.buttonTextStyle,
@@ -251,19 +339,18 @@ class _ContentWidget extends StatelessWidget {
           SizedBox(height: screenHeight * 0.015),
           LocationSection(animation: cardAnimation),
           SizedBox(height: screenHeight * 0.025),
-          _OpportunitySection(
+          _FilterSection(
             animation: opportunitiesAnimation,
             screenWidth: screenWidth,
-            opportunities: opportunities,
-            selectedOpportunity: selectedOpportunity,
-            onOpportunitySelected: onOpportunitySelected,
-            titleTextStyle: titleTextStyle,
-            buttonTextStyle: buttonTextStyle,
+            currentFilters: currentFilters,
+            onFiltersChanged: onFiltersChanged,
+            availableCompanies: _getAvailableCompanies(),
           ),
           SizedBox(height: screenHeight * 0.02),
           _EarningSection(
             animation: opportunitiesAnimation,
             screenWidth: screenWidth,
+            filteredOpportunities: filteredOpportunities,
             onCompanyTap: onCompanyTap,
             titleTextStyle: titleTextStyle,
             buttonTextStyle: buttonTextStyle,
@@ -273,25 +360,28 @@ class _ContentWidget extends StatelessWidget {
       ),
     );
   }
+
+  List<String> _getAvailableCompanies() {
+    return [
+      'All Companies',
+      ...OpportunityData.opportunities.map((e) => e.name).toSet(),
+    ];
+  }
 }
 
-class _OpportunitySection extends StatelessWidget {
+class _FilterSection extends StatelessWidget {
   final Animation<double> animation;
   final double screenWidth;
-  final List<Map<String, dynamic>> opportunities;
-  final String? selectedOpportunity;
-  final Function(String?) onOpportunitySelected;
-  final TextStyle titleTextStyle;
-  final TextStyle buttonTextStyle;
+  final OpportunityFilters currentFilters;
+  final Function(OpportunityFilters) onFiltersChanged;
+  final List<String> availableCompanies;
 
-  const _OpportunitySection({
+  const _FilterSection({
     required this.animation,
     required this.screenWidth,
-    required this.opportunities,
-    required this.selectedOpportunity,
-    required this.onOpportunitySelected,
-    required this.titleTextStyle,
-    required this.buttonTextStyle,
+    required this.currentFilters,
+    required this.onFiltersChanged,
+    required this.availableCompanies,
   });
 
   @override
@@ -303,56 +393,10 @@ class _OpportunitySection extends StatelessWidget {
           offset: Offset(0, 40 * (1 - animation.value)),
           child: Opacity(
             opacity: animation.value.clamp(0.0, 1.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Choose Opportunity',
-                      style: titleTextStyle,
-                    ),
-                    if (selectedOpportunity != null)
-                      TextButton(
-                        onPressed: () => onOpportunitySelected(null),
-                        child: Text(
-                          'Clear',
-                          style: buttonTextStyle,
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(height: screenWidth * 0.03),
-                SizedBox(
-                  height: screenWidth * 0.1,
-                  child: ListView.builder(
-                    physics: BouncingScrollPhysics(),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: opportunities.length,
-                    itemBuilder: (context, index) {
-                      final opportunity = opportunities[index];
-                      final isSelected = selectedOpportunity == opportunity['name'];
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < opportunities.length - 1 ? screenWidth * 0.025 : 0,
-                        ),
-                        child:  OpportunityButton(
-                          name: opportunity['name'],
-                          color: opportunity['color'],
-                          logoPath: opportunity['logoPath'],
-                          isSelected: isSelected,
-                          onTap: () {
-                            onOpportunitySelected(
-                                isSelected ? null : opportunity['name']
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            child: OpportunityFiltersWidget(
+              currentFilters: currentFilters,
+              onFiltersChanged: onFiltersChanged,
+              availableCompanies: availableCompanies,
             ),
           ),
         );
@@ -364,6 +408,7 @@ class _OpportunitySection extends StatelessWidget {
 class _EarningSection extends StatelessWidget {
   final Animation<double> animation;
   final double screenWidth;
+  final List<Opportunity> filteredOpportunities;
   final Function(Opportunity) onCompanyTap;
   final TextStyle titleTextStyle;
   final TextStyle buttonTextStyle;
@@ -371,6 +416,7 @@ class _EarningSection extends StatelessWidget {
   const _EarningSection({
     required this.animation,
     required this.screenWidth,
+    required this.filteredOpportunities,
     required this.onCompanyTap,
     required this.titleTextStyle,
     required this.buttonTextStyle,
@@ -388,26 +434,6 @@ class _EarningSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Earning Potential',
-                      style: titleTextStyle,
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('View all clicked!')),
-                        );
-                      },
-                      child: Text(
-                        'View All',
-                        style: buttonTextStyle,
-                      ),
-                    ),
-                  ],
-                ),
                 SizedBox(height: screenWidth * 0.03),
                 GridView.builder(
                   shrinkWrap: true,
@@ -418,9 +444,9 @@ class _EarningSection extends StatelessWidget {
                     crossAxisSpacing: screenWidth * 0.03,
                     childAspectRatio: 1.2,
                   ),
-                  itemCount: OpportunityData.opportunities.length,
+                  itemCount: filteredOpportunities.length,
                   itemBuilder: (context, index) {
-                    final opportunity = OpportunityData.opportunities[index];
+                    final opportunity = filteredOpportunities[index];
                     return EarningCard(
                       opportunity: opportunity,
                       onTap: () => onCompanyTap(opportunity),

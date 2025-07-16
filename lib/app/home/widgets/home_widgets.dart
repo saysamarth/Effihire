@@ -1,11 +1,13 @@
+import 'package:effihire/auth/Bank%20Registration/screens/bank_detail_input_screen.dart';
 import 'package:effihire/auth/Registration/views/registration_screen.dart';
-//import 'package:effihire/auth/Bank%20Registration/screens/bank_detail_input_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/opportunity.dart';
+
 import '../../../auth/Fetch Location/Location Cubit/location_cubit.dart';
 import '../../../auth/Fetch Location/Location Cubit/location_state.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../config/service/shared_pref.dart';
+import '../models/opportunity.dart';
 
 class WelcomeSection extends StatelessWidget {
   final Animation<double> animation;
@@ -32,16 +34,37 @@ class WelcomeSection extends StatelessWidget {
   }
 }
 
-class _WelcomeContent extends StatelessWidget {
+class _WelcomeContent extends StatefulWidget {
   final double screenWidth;
 
   const _WelcomeContent({required this.screenWidth});
 
   @override
+  State<_WelcomeContent> createState() => _WelcomeContentState();
+}
+
+class _WelcomeContentState extends State<_WelcomeContent> {
+  int _registrationStatus = 0;
+  String? _userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    setState(() {
+      _registrationStatus = SharedPrefsService.getRegistrationStatus();
+      _userName = SharedPrefsService.getUserName();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(screenWidth * 0.05),
+      padding: EdgeInsets.all(widget.screenWidth * 0.05),
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(250),
         borderRadius: BorderRadius.circular(20),
@@ -61,67 +84,176 @@ class _WelcomeContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome',
+                  _userName != null ? 'Welcome, $_userName' : 'Welcome',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: screenWidth * 0.07,
+                    fontSize: widget.screenWidth * 0.060,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF5B3E86),
                   ),
                 ),
-                SizedBox(height: screenWidth * 0.02),
+                SizedBox(height: widget.screenWidth * 0.02),
                 Text(
-                  'Find your perfect opportunity',
+                  _getSubtitle(_registrationStatus),
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: screenWidth * 0.035,
+                    fontSize: widget.screenWidth * 0.035,
                     fontWeight: FontWeight.w400,
                     color: Colors.grey.shade600,
                   ),
                 ),
-                SizedBox(height: screenWidth * 0.03),
-                _RegisterButton(screenWidth: screenWidth),
+                SizedBox(height: widget.screenWidth * 0.03),
+                _buildActionWidget(_registrationStatus),
               ],
             ),
           ),
-          _LogoCircle(screenWidth: screenWidth),
+          _LogoCircle(screenWidth: widget.screenWidth),
         ],
       ),
     );
   }
-}
 
-class _RegisterButton extends StatelessWidget {
-  final double screenWidth;
+  String _getSubtitle(int status) {
+    switch (status) {
+      case 1:
+        return 'Just one more step to go!';
+      case 2:
+        return 'Your details have been submitted.';
+      case 3:
+        return 'Find your perfect opportunity';
+      default:
+        return 'Create a profile to get started.';
+    }
+  }
 
-  const _RegisterButton({required this.screenWidth});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) =>
-                const RegistrationScreen(), //BankDetailsScreen(),
+  Widget _buildActionWidget(int status) {
+    switch (status) {
+      case 0:
+        return ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const RegistrationScreen(),
+              ),
+            );
+          },
+          style: _buttonStyle(),
+          child: Text('Register now', style: _buttonTextStyle()),
+        );
+      case 1:
+        return ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const BankDetailsScreen(),
+              ),
+            );
+          },
+          style: _buttonStyle(),
+          child: Text('Complete bank registration', style: _buttonTextStyle()),
+        );
+      case 2:
+        return _buildStatusContainer(
+          text: 'Profile Under Review',
+          isHighlighted: false,
+        );
+      case 3:
+        return _buildStatusContainer(
+          text: 'Profile Verified',
+          isHighlighted: true,
+          trailing: Icon(
+            Icons.done_all_rounded,
+            color: Colors.white,
+            size: widget.screenWidth * 0.05,
           ),
         );
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF5B3E86),
-        foregroundColor: Colors.white,
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.05,
-          vertical: screenWidth * 0.025,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 3,
+      default:
+        return _buildTappableContainer(
+          text: 'Register Now',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const RegistrationScreen(),
+              ),
+            );
+          },
+        );
+    }
+  }
+
+  Widget _buildStatusContainer({
+    required String text,
+    required bool isHighlighted,
+    bool isButton = false,
+    Widget? trailing,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.screenWidth * 0.05,
+        vertical: widget.screenWidth * 0.025,
       ),
-      child: Text(
-        'Register now',
-        style: GoogleFonts.plusJakartaSans(
-          fontWeight: FontWeight.w600,
-          fontSize: screenWidth * 0.035,
-        ),
+      decoration: BoxDecoration(
+        color: isHighlighted ? const Color(0xFF5B3E86) : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: isButton
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF5B3E86).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w600,
+              fontSize: widget.screenWidth * 0.033,
+              color: isHighlighted ? Colors.white : Colors.grey.shade700,
+            ),
+          ),
+          if (trailing != null) ...[
+            SizedBox(width: widget.screenWidth * 0.02),
+            trailing,
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTappableContainer({
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: _buildStatusContainer(
+        text: text,
+        isHighlighted: true,
+        isButton: true,
+      ),
+    );
+  }
+
+  ButtonStyle _buttonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF5B3E86),
+      foregroundColor: Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.screenWidth * 0.05,
+        vertical: widget.screenWidth * 0.025,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 3,
+    );
+  }
+
+  TextStyle _buttonTextStyle() {
+    return GoogleFonts.plusJakartaSans(
+      fontWeight: FontWeight.w600,
+      fontSize: widget.screenWidth * 0.033,
     );
   }
 }
@@ -196,15 +328,12 @@ class _LocationContent extends StatelessWidget {
   const _LocationContent({required this.screenWidth});
 
   void _handleLocationTap(BuildContext context) {
-    // Show loading feedback
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Refreshing location...'),
         duration: Duration(seconds: 1),
       ),
     );
-
-    // Refresh location using cubit
     context.read<LocationCubit>().updateLocation();
   }
 
@@ -315,96 +444,6 @@ class _LocationContent extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class OpportunityButton extends StatelessWidget {
-  final String name;
-  final Color color;
-  final String logoPath;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const OpportunityButton({
-    super.key,
-    required this.name,
-    required this.color,
-    required this.logoPath,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final logoSize = screenWidth * 0.04;
-    final cacheSize = (logoSize * MediaQuery.of(context).devicePixelRatio)
-        .toInt();
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth * 0.035,
-              vertical: screenWidth * 0.02,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected ? color.withAlpha(25) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? color : color.withAlpha(75),
-                width: isSelected ? 2 : 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(isSelected ? 40 : 20),
-                  blurRadius: isSelected ? 8 : 4,
-                  offset: Offset(0, isSelected ? 4 : 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: Image.asset(
-                    logoPath,
-                    width: logoSize,
-                    height: logoSize,
-                    fit: BoxFit.cover,
-                    cacheWidth: cacheSize,
-                    cacheHeight: cacheSize,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.business,
-                        size: logoSize,
-                        color: isSelected ? color : color.withAlpha(200),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(width: screenWidth * 0.015),
-                Text(
-                  name,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: screenWidth * 0.032,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: isSelected ? color : color.withAlpha(200),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

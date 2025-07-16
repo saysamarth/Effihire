@@ -120,10 +120,7 @@ app.patch('/users/:id/complete-personal-registration', async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        if (updateFields.gender) {
-            updateFields.gender = updateFields.gender.toLowerCase();
-        }
-
+        
         const mustAlreadyExist = [
             'mobile_number',
         ];
