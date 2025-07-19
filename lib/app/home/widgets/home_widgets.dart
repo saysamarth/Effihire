@@ -50,6 +50,7 @@ class _WelcomeContentState extends State<_WelcomeContent> {
   @override
   void initState() {
     super.initState();
+    //SharedPrefsService.setRegistrationStatus(0);
     _loadUserData();
   }
 

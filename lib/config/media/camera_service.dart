@@ -1,6 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+import 'dart:async';
 import 'dart:io';
+
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+
+import 'anti_spoofing_service.dart';
 
 // Service class to handle photo capture operations
 class PhotoCaptureService {
@@ -22,7 +26,7 @@ class PhotoCaptureService {
   /// Check if front camera is available
   bool get hasFrontCamera {
     if (!_isInitialized || _availableCameras == null) return false;
-    
+
     return _availableCameras!.any(
       (camera) => camera.lensDirection == CameraLensDirection.front,
     );
@@ -34,16 +38,16 @@ class PhotoCaptureService {
     bool showPreview = true,
   }) async {
     if (!_isInitialized) {
-      throw Exception('PhotoCaptureService not initialized. Call initializeService() first.');
+      throw Exception(
+        'PhotoCaptureService not initialized. Call initializeService() first.',
+      );
     }
 
     try {
       final result = await Navigator.push<XFile>(
         context,
         MaterialPageRoute(
-          builder: (context) => PhotoCaptureScreen(
-            showPreview: showPreview,
-          ),
+          builder: (context) => PhotoCaptureScreen(showPreview: showPreview),
         ),
       );
 
@@ -67,10 +71,7 @@ class PhotoCaptureService {
 class PhotoCaptureScreen extends StatefulWidget {
   final bool showPreview;
 
-  const PhotoCaptureScreen({
-    super.key,
-    this.showPreview = true,
-  });
+  const PhotoCaptureScreen({super.key, this.showPreview = true});
 
   @override
   State<PhotoCaptureScreen> createState() => _PhotoCaptureScreenState();
@@ -84,16 +85,32 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
   bool _isCapturing = false;
   String? _errorMessage;
 
+  // Anti-spoofing state variables
+  final AntiSpoofingService _antiSpoofingService = AntiSpoofingService();
+  bool _isProcessingFrame = false;
+  String _statusMessage = 'Position your face within the oval guide';
+  bool _isCaptureEnabled = false;
+  StatusType _statusType = StatusType.initial;
+
+  // Timer to control the rate of frame processing
+  Timer? _frameProcessingTimer;
+  CameraImage? _latestImage;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
+    _initializeControllerFuture = _initializeCamera();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _frameProcessingTimer?.cancel();
+    if (_controller?.value.isInitialized == true &&
+        _controller!.value.isStreamingImages) {
+      _controller!.stopImageStream();
+    }
     _controller?.dispose();
     super.dispose();
   }
@@ -107,6 +124,10 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
     }
 
     if (state == AppLifecycleState.inactive) {
+      _frameProcessingTimer?.cancel();
+      if (cameraController.value.isStreamingImages) {
+        cameraController.stopImageStream();
+      }
       cameraController.dispose();
     } else if (state == AppLifecycleState.resumed) {
       _initializeCamera();
@@ -114,64 +135,101 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
   }
 
   Future<void> _initializeCamera() async {
+    if (_controller != null) {
+      await _controller!.dispose();
+    }
+    _frameProcessingTimer?.cancel();
+
     try {
       final cameras = await availableCameras();
-      
-      // Find front camera only
-      CameraDescription? frontCamera;
-      for (final camera in cameras) {
-        if (camera.lensDirection == CameraLensDirection.front) {
-          frontCamera = camera;
-          break;
-        }
-      }
-
-      if (frontCamera == null) {
-        setState(() {
-          _errorMessage = 'Front camera not available';
-        });
-        return;
-      }
+      final frontCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front,
+        orElse: () => throw Exception('Front camera not found'),
+      );
 
       _controller = CameraController(
         frontCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.medium, // Changed to medium resolution
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.nv21,
       );
 
-      _initializeControllerFuture = _controller!.initialize();
-      await _initializeControllerFuture;
+      await _controller!.initialize();
+
+      if (!mounted) {
+        return;
+      }
+
+      _controller!.startImageStream((image) => _latestImage = image);
+
+      _frameProcessingTimer = Timer.periodic(
+        const Duration(milliseconds: 500),
+        (_) {
+          if (_isProcessingFrame || _latestImage == null || _isCaptureEnabled)
+            return;
+          _processFrame();
+        },
+      );
 
       if (mounted) {
-        setState(() {
-          _errorMessage = null;
-        });
+        setState(() {});
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to initialize camera: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to initialize camera: ${e.toString()}';
+        });
+      }
     }
   }
 
+  Future<void> _processFrame() async {
+    _isProcessingFrame = true;
+    final result = await _antiSpoofingService.processImage(_latestImage!);
+
+    if (mounted) {
+      setState(() {
+        _statusMessage = result.statusMessage;
+        _statusType = result.statusType;
+        _isCaptureEnabled = result.isCaptureEnabled;
+      });
+
+      if (_isCaptureEnabled) {
+        _frameProcessingTimer?.cancel();
+        if (_controller!.value.isStreamingImages) {
+          _controller!.stopImageStream();
+        }
+      }
+    }
+
+    _isProcessingFrame = false;
+  }
+
   Future<void> _capturePhoto() async {
-    if (_controller?.value.isInitialized != true || _isCapturing) return;
+    if (_controller?.value.isInitialized != true ||
+        _isCapturing ||
+        !_isCaptureEnabled)
+      return;
 
     try {
       setState(() {
         _isCapturing = true;
       });
 
+      _frameProcessingTimer?.cancel();
+      if (_controller!.value.isStreamingImages) {
+        await _controller!.stopImageStream();
+      }
+
       final XFile image = await _controller!.takePicture();
-      
+
       if (widget.showPreview) {
         setState(() {
           _capturedImage = image;
           _isCapturing = false;
         });
       } else {
-        // Return immediately without preview
-        if(mounted){
+        if (mounted) {
           Navigator.pop(context, image);
         }
       }
@@ -184,9 +242,16 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
   }
 
   void _retakePhoto() {
+    _antiSpoofingService.reset();
     setState(() {
       _capturedImage = null;
+      _isCaptureEnabled = false;
+      _statusMessage = 'Position your face within the oval guide';
+      _statusType = StatusType.initial;
+      // FIX: Set controller to null before re-initializing to avoid disposed error
+      _controller = null;
     });
+    _initializeControllerFuture = _initializeCamera();
   }
 
   void _confirmPhoto() {
@@ -222,11 +287,9 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
     if (_errorMessage != null) {
       return _buildErrorState();
     }
-
     if (_capturedImage != null && widget.showPreview) {
       return _buildPhotoPreview();
     }
-
     return _buildCameraView();
   }
 
@@ -235,26 +298,24 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.white,
-            size: 64,
-          ),
+          const Icon(Icons.error_outline, color: Colors.white, size: 64),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               _errorMessage!,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _initializeCamera,
+            onPressed: () {
+              setState(() {
+                _errorMessage = null;
+              });
+              _initializeControllerFuture = _initializeCamera();
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -276,14 +337,17 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
     return FutureBuilder<void>(
       future: _initializeControllerFuture,
       builder: (context, snapshot) {
+        // Use a local variable to avoid race conditions with the controller
+        final controller = _controller;
         if (snapshot.connectionState == ConnectionState.done &&
-            _controller?.value.isInitialized == true) {
+            controller != null &&
+            controller.value.isInitialized) {
           return Column(
             children: [
               Expanded(
                 child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    // Camera preview
                     Positioned.fill(
                       child: ClipRRect(
                         borderRadius: const BorderRadius.vertical(
@@ -291,14 +355,12 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
                         ),
                         child: Transform(
                           alignment: Alignment.center,
-                          transform: Matrix4.rotationY(3.14159), // Mirror for front camera
-                          child: CameraPreview(_controller!),
+                          transform: Matrix4.rotationY(3.14159),
+                          child: CameraPreview(controller),
                         ),
                       ),
                     ),
-                    // Grey overlay with oval cutout
                     _buildGreyOverlay(),
-                    // Instructions
                     _buildInstructions(),
                   ],
                 ),
@@ -320,12 +382,28 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
 
   Widget _buildGreyOverlay() {
     return CustomPaint(
-      painter: OvalCutoutPainter(),
+      painter: OvalCutoutPainter(statusType: _statusType),
       size: Size.infinite,
     );
   }
 
   Widget _buildInstructions() {
+    Color statusColor;
+    switch (_statusType) {
+      case StatusType.inProgress:
+        statusColor = Colors.orange.withAlpha(200);
+        break;
+      case StatusType.success:
+        statusColor = Colors.green.withAlpha(200);
+        break;
+      case StatusType.error:
+        statusColor = Colors.red.withAlpha(200);
+        break;
+      case StatusType.initial:
+      default:
+        statusColor = Colors.black.withAlpha(175);
+    }
+
     return Positioned(
       top: 80,
       left: 0,
@@ -334,12 +412,12 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
         margin: const EdgeInsets.symmetric(horizontal: 32),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.black.withAlpha(175),
+          color: statusColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Text(
-          'Position your face within the oval guide',
-          style: TextStyle(
+        child: Text(
+          _statusMessage,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -358,15 +436,15 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
         children: [
           const SizedBox(width: 64),
           GestureDetector(
-            onTap: _isCapturing ? null : _capturePhoto,
+            onTap: _isCapturing || !_isCaptureEnabled ? null : _capturePhoto,
             child: Container(
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: _isCapturing ? Colors.grey : Colors.white,
+                color: _isCaptureEnabled ? Colors.white : Colors.grey[700],
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.blue,
+                  color: _isCaptureEnabled ? Colors.green : Colors.blue,
                   width: 4,
                 ),
                 boxShadow: [
@@ -378,15 +456,17 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
                 ],
               ),
               child: _isCapturing
-                  ? const Center(
+                  ? Center(
                       child: CircularProgressIndicator(
-                        color: Colors.blue,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _isCaptureEnabled ? Colors.green : Colors.blue,
+                        ),
                         strokeWidth: 3,
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.camera_alt,
-                      color: Colors.blue,
+                      color: _isCaptureEnabled ? Colors.green : Colors.blue,
                       size: 32,
                     ),
             ),
@@ -415,10 +495,7 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Image.file(
-                File(_capturedImage!.path),
-                fit: BoxFit.cover,
-              ),
+              child: Image.file(File(_capturedImage!.path), fit: BoxFit.cover),
             ),
           ),
         ),
@@ -433,9 +510,17 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Retake button
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: _retakePhoto,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            label: const Text(
+              'Retake',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey[800],
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -443,46 +528,24 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
                 borderRadius: BorderRadius.circular(24),
               ),
             ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.refresh, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Retake',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
           ),
-          // Confirm button
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: _confirmPhoto,
+            icon: const Icon(Icons.check, color: Colors.white),
+            label: const Text(
+              'Confirm',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
               ),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check, color: Colors.white),
-                SizedBox(width: 8),
-                Text(
-                  'Confirm',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -493,59 +556,69 @@ class _PhotoCaptureScreenState extends State<PhotoCaptureScreen>
 
 // Custom painter to create grey overlay with oval cutout
 class OvalCutoutPainter extends CustomPainter {
+  final StatusType statusType;
+
+  OvalCutoutPainter({this.statusType = StatusType.initial});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = Colors.black.withAlpha(150)
       ..style = PaintingStyle.fill;
 
-    // Create the full rectangle
     final fullRect = Rect.fromLTWH(0, 0, size.width, size.height);
-    
-    // Create the oval cutout path
-    final ovalPath = Path();
     final center = Offset(size.width / 2, size.height / 2);
-    final ovalRect = Rect.fromCenter(
-      center: center,
-      width: 190,
-      height: 260,
+    // Adjusted oval size
+    final ovalRect = Rect.fromCenter(center: center, width: 200, height: 280);
+    final ovalPath = Path()..addOval(ovalRect);
+
+    final finalPath = Path.combine(
+      PathOperation.difference,
+      Path()..addRect(fullRect),
+      ovalPath,
     );
-    
-    ovalPath.addOval(ovalRect);
-    
-    // Create the final path by subtracting the oval from the full rectangle
-    final finalPath = Path()
-      ..addRect(fullRect)
-      ..addPath(ovalPath, Offset.zero);
-    
-    // Use the even-odd fill rule to create the cutout effect
-    finalPath.fillType = PathFillType.evenOdd;
-    
+
     canvas.drawPath(finalPath, paint);
-    
-    // Draw the oval border
+
+    Color borderColor;
+    switch (statusType) {
+      case StatusType.inProgress:
+        borderColor = Colors.orange;
+        break;
+      case StatusType.success:
+        borderColor = Colors.green;
+        break;
+      case StatusType.error:
+        borderColor = Colors.red;
+        break;
+      case StatusType.initial:
+      default:
+        borderColor = Colors.white.withAlpha(200);
+    }
+
     final borderPaint = Paint()
-      ..color = Colors.white.withAlpha(200)
+      ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-    
+
     canvas.drawOval(ovalRect, borderPaint);
-    
-    // Draw inner border
+
     final innerBorderPaint = Paint()
-      ..color = Colors.blue.withAlpha(75)
+      ..color = borderColor.withAlpha(75)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    
+
+    // Adjusted inner oval size to match
     final innerOvalRect = Rect.fromCenter(
       center: center,
-      width: 186,
-      height: 256,
+      width: 196,
+      height: 276,
     );
-    
+
     canvas.drawOval(innerOvalRect, innerBorderPaint);
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(CustomPainter oldDelegate) =>
+      oldDelegate is! OvalCutoutPainter || statusType != oldDelegate.statusType;
 }
