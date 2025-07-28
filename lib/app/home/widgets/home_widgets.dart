@@ -427,7 +427,7 @@ class _LocationContent extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                             color: const Color(0xFF757575),
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],

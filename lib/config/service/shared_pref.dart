@@ -7,6 +7,7 @@ class SharedPrefsService {
   static const String _keyUserUid = 'user_uid';
   static const String _keyRegistrationStatus = 'registration_status';
   static const String _keyUserName = 'user_name';
+  static const String _keyReferralCode = 'referral_code';
 
   // Initialize SharedPreferences
   static Future<void> init() async {
@@ -63,12 +64,27 @@ class SharedPrefsService {
     await _instance.remove(_keyUserName);
   }
 
+  // ==================== Refferal Code ====================
+
+  static Future<void> setReferralCode(String code) async {
+    await _instance.setString(_keyReferralCode, code);
+  }
+
+  static String? getReferralCode() {
+    return _instance.getString(_keyReferralCode);
+  }
+
+  static Future<void> clearReferralCode() async {
+    await _instance.remove(_keyReferralCode);
+  }
+
   // Clear all user data (logout)
   static Future<void> clearAllUserData() async {
     await Future.wait([
       clearUserUid(),
       clearRegistrationStatus(),
       clearUserName(),
+      clearReferralCode(),
     ]);
   }
 
@@ -78,6 +94,7 @@ class SharedPrefsService {
     print('User UID: ${getUserUid()}');
     print('Registration Status: ${getRegistrationStatus()}');
     print('User Name: ${getUserName()}');
+    print('Referral Code: ${getReferralCode()}');
     print('==============================');
   }
 }

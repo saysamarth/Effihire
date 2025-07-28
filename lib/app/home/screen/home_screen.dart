@@ -273,9 +273,9 @@ class _BackgroundWidget extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
+                  Color.fromARGB(255, 82, 39, 137),
+                  Color.fromARGB(255, 118, 57, 224),
                   Color(0xFF8B5CF6),
-                  Color(0xFF7C3AED),
-                  Color(0xFF6D28D9),
                 ],
               ),
             ),

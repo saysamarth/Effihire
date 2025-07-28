@@ -1,3 +1,13 @@
+import java.util.Properties
+
+val envProps = Properties()
+val envFile = rootProject.file(".env")
+if (envFile.exists()) {
+    envProps.load(envFile.inputStream())
+} else {
+    println(".env file not found. GOOGLE_MAPS_API_KEY will not be available.")
+}
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -31,6 +41,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = envProps.getProperty("GOOGLE_MAPS_API_KEY", "")
     }
 
     buildTypes {

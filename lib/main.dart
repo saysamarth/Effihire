@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import './app/payment/cubit/payment_cubit.dart';
 import './app/payment/services/payment_services.dart';
@@ -16,6 +17,13 @@ void main() async {
   await Firebase.initializeApp();
   await SharedPrefsService.init();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  try {
+    await dotenv.load(fileName: ".env");
+    print("✅ .env loaded successfully");
+  } catch (e) {
+    print("❌ Error loading .env: $e");
+  }
+
   runApp(MyApp());
 }
 

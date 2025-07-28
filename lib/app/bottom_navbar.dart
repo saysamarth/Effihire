@@ -1,9 +1,12 @@
 // bottom_navbar.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import '../app/home/screen/home_screen.dart';
 import '../app/profile/screens/profile_screen.dart';
+import '../app/refer/screen/referral_screen.dart';
+import '../app/task/screen/task_screen.dart';
 import 'payment/views/payment.dart';
 
 class BottomNavBar extends StatefulWidget {
@@ -43,7 +46,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
     _pages = [
       const ReferralScreen(),
-      const TasksScreen(),
+      const TaskScreen(),
       const HomeScreen(),
       PaymentTab(),
       ProfileScreen(userPhone: _userPhone),
@@ -143,38 +146,14 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class ReferralScreen extends StatelessWidget {
-  const ReferralScreen({super.key});
+// class ReferralScreen extends StatelessWidget {
+//   const ReferralScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Referral')),
-      body: const Center(child: Text('Referral Screen')),
-    );
-  }
-}
-
-class TasksScreen extends StatelessWidget {
-  const TasksScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Tasks')),
-      body: const Center(child: Text('Tasks Screen')),
-    );
-  }
-}
-
-class PaymentScreen extends StatelessWidget {
-  const PaymentScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Payment')),
-      body: const Center(child: Text('Payment Screen')),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text('Referral')),
+//       body: const Center(child: Text('Referral Screen')),
+//     );
+//   }
+// }
