@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
 class RegistrationService {
-  static const String baseUrl = 'http://192.168.0.107:3000';
+  static const String baseUrl = 'https://effihire.onrender.com';
 
   Future<String?> uploadImageToFirebase(
     File imageFile,

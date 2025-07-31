@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -49,21 +50,20 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDgBYNiZ4UiwhIprpNdo_8QBBpo0bONCm0',
+  static FirebaseOptions android = FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_API_KEY_ANDROID']!,
     appId: '1:413881959029:android:d63044a2738647688a6e3c',
     messagingSenderId: '413881959029',
     projectId: 'effihire-39f57',
     storageBucket: 'effihire-39f57.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB0zWhujt1Y80rCPrzKBeaDDbf3kUKb6fg',
+  static FirebaseOptions ios = FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_API_KEY_IOS']!,
     appId: '1:413881959029:ios:7e0ac4028fce27e28a6e3c',
     messagingSenderId: '413881959029',
     projectId: 'effihire-39f57',
     storageBucket: 'effihire-39f57.firebasestorage.app',
     iosBundleId: 'com.example.effihire',
   );
-
 }

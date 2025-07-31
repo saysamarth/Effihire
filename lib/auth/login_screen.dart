@@ -328,7 +328,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _handleDatabaseError(dynamic apiError) async {
     try {
-      // Sign out from Firebase to maintain consistency
       await _auth.signOut();
     } catch (signOutError) {
       print('Error signing out: $signOutError');

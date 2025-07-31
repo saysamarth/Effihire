@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../models/bank_model.dart';
 
 class BankVerificationService {
-  static const String _baseUrl = 'https://your-api-base-url.com';
+  static const String _baseUrl = 'https://effihire.onrender.com';
   static const String _verifyEndpoint = '/api/bank/verify';
   static const String _submitEndpoint = '/api/bank/submit';
   static const Duration _timeoutDuration = Duration(seconds: 30);
@@ -62,7 +62,6 @@ class BankVerificationService {
           .timeout(_timeoutDuration);
 
       return _parseVerificationResponse(response);
-
     } on SocketException {
       return BankVerificationResponse(
         success: false,
@@ -81,7 +80,7 @@ class BankVerificationService {
         message: 'Invalid response format from server.',
         errorCode: 'INVALID_RESPONSE',
       );
-    } catch (e) { 
+    } catch (e) {
       debugPrint('Bank verification error: $e');
       return BankVerificationResponse(
         success: false,
@@ -113,7 +112,6 @@ class BankVerificationService {
           .timeout(_timeoutDuration);
 
       return _parseSubmissionResponse(response);
-
     } on SocketException {
       debugPrint('No internet connection during submission');
       return false;
@@ -126,7 +124,9 @@ class BankVerificationService {
     }
   }
 
-  static BankVerificationResponse _parseVerificationResponse(http.Response response) {
+  static BankVerificationResponse _parseVerificationResponse(
+    http.Response response,
+  ) {
     try {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -248,8 +248,12 @@ class BankVerificationService {
       }
 
       if (lastResponse.errorCode != null &&
-          ['INVALID_ACCOUNT_NUMBER', 'INVALID_IFSC', 'UNAUTHORIZED', 'BAD_REQUEST']
-              .contains(lastResponse.errorCode)) {
+          [
+            'INVALID_ACCOUNT_NUMBER',
+            'INVALID_IFSC',
+            'UNAUTHORIZED',
+            'BAD_REQUEST',
+          ].contains(lastResponse.errorCode)) {
         break;
       }
       if (attempt < maxRetries) {
@@ -257,10 +261,11 @@ class BankVerificationService {
       }
     }
 
-    return lastResponse ?? BankVerificationResponse(
-      success: false,
-      message: 'All retry attempts failed',
-      errorCode: 'MAX_RETRIES_EXCEEDED',
-    );
+    return lastResponse ??
+        BankVerificationResponse(
+          success: false,
+          message: 'All retry attempts failed',
+          errorCode: 'MAX_RETRIES_EXCEEDED',
+        );
   }
 }

@@ -3,9 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Replace with your actual backend URL
-  static const String baseUrl =
-      'http://192.168.0.107:3000'; //10.0.2.2 for emulator
+  static const String baseUrl = 'https://effihire.onrender.com';
 
   // Check if user exists by mobile number
   static Future<Map<String, dynamic>> checkUserExists(
