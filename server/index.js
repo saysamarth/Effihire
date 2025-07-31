@@ -405,11 +405,13 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
+const PORT = process.env.PORT || 3000;
+
 syncDatabase()
     .then(() => {
         console.log('Database synced successfully');
-        const server = app.listen(3000, () => {
-            console.log('Server running at http://localhost:3000');
+        const server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
         });
 
         server.on('error', (err) => {
